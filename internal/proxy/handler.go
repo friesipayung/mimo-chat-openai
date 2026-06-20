@@ -111,6 +111,11 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Add JSON mode instructions if response_format is json_object
+	if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_object" {
+		query = query + "\n\n[System Instruction: You must respond with valid JSON only. Do not include any text outside the JSON object.]"
+	}
+
 	if medias == nil {
 		medias = []interface{}{}
 	}

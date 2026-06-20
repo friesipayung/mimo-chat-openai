@@ -272,6 +272,16 @@ Enable real-time web search:
 
 Supported models: all
 
+### Structured Output (JSON Mode)
+Force model to respond with valid JSON:
+{
+  "model": "mimo-v2.5-pro",
+  "messages": [...],
+  "response_format": {"type": "json_object"}
+}
+
+The response content will be valid JSON.
+
 ### Multimodal (Image/Audio/Video)
 Send images, audio, or video in messages:
 
@@ -351,6 +361,7 @@ Supported formats:
 | max_tokens | int | null | Max output tokens |
 | thinking | object | null | Thinking config {"type": "enabled"} |
 | tools | array | null | Tools (web_search) |
+| response_format | object | null | Response format {"type": "json_object"} |
 
 ## Web UI
 

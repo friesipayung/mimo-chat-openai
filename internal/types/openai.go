@@ -34,15 +34,20 @@ type Annotation struct {
 	LogoURL     string `json:"logo_url,omitempty"`
 }
 
+type ResponseFormat struct {
+	Type string `json:"type"` // "json_object" or "text"
+}
+
 type ChatCompletionRequest struct {
-	Model       string        `json:"model"`
-	Messages    []ChatMessage `json:"messages"`
-	Stream      bool          `json:"stream,omitempty"`
-	Temperature *float64      `json:"temperature,omitempty"`
-	TopP        *float64      `json:"top_p,omitempty"`
-	MaxTokens   *int          `json:"max_tokens,omitempty"`
-	Thinking    *ThinkingConfig `json:"thinking,omitempty"`
-	Tools       []Tool        `json:"tools,omitempty"`
+	Model          string          `json:"model"`
+	Messages       []ChatMessage   `json:"messages"`
+	Stream         bool            `json:"stream,omitempty"`
+	Temperature    *float64        `json:"temperature,omitempty"`
+	TopP           *float64        `json:"top_p,omitempty"`
+	MaxTokens      *int            `json:"max_tokens,omitempty"`
+	Thinking       *ThinkingConfig `json:"thinking,omitempty"`
+	Tools          []Tool          `json:"tools,omitempty"`
+	ResponseFormat *ResponseFormat `json:"response_format,omitempty"`
 }
 
 type ChatMessage struct {
