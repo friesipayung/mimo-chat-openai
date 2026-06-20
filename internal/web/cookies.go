@@ -234,3 +234,63 @@ func (h *CookieHandler) HandleUpdateAlias(w http.ResponseWriter, r *http.Request
 
 	writeJSON(w, 200, map[string]string{"status": "updated"})
 }
+
+func (h *CookieHandler) HandleCheckBalance(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		writeJSON(w, 400, map[string]string{"error": "id is required"})
+		return
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writeJSON(w, 400, map[string]string{"error": "invalid id"})
+		return
+	}
+
+	cookie, err := h.db.GetCookie(id)
+	if err != nil {
+		writeJSON(w, 404, map[string]string{"error": "cookie not found"})
+		return
+	}
+
+	go func() {
+		balanceResp, err := h.client.GetBalance(cookie.FullCookie)
+		if err != nil {
+			h.db.UpdateCookieBalance(id, "error", "")
+			return
+		}
+		if balanceResp.Code == 0 && balanceResp.Data.RemainBalance != "" {
+			h.db.UpdateCookieBalance(id, balanceResp.Data.RemainBalance, balanceResp.Data.Currency)
+		} else {
+			h.db.UpdateCookieBalance(id, "N/A", "")
+		}
+	}()
+
+	writeJSON(w, 200, map[string]string{"status": "checking"})
+}
+
+func (h *CookieHandler) HandleCheckBalanceAll(w http.ResponseWriter, r *http.Request) {
+	cookies, err := h.db.ListCookies()
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+
+	for _, c := range cookies {
+		go func(cookie db.Cookie) {
+			balanceResp, err := h.client.GetBalance(cookie.FullCookie)
+			if err != nil {
+				h.db.UpdateCookieBalance(cookie.ID, "error", "")
+				return
+			}
+			if balanceResp.Code == 0 && balanceResp.Data.RemainBalance != "" {
+				h.db.UpdateCookieBalance(cookie.ID, balanceResp.Data.RemainBalance, balanceResp.Data.Currency)
+			} else {
+				h.db.UpdateCookieBalance(cookie.ID, "N/A", "")
+			}
+		}(c)
+	}
+
+	writeJSON(w, 200, map[string]string{"status": "checking all"})
+}

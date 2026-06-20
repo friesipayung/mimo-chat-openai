@@ -14,6 +14,7 @@ import (
 )
 
 const mimoBase = "https://aistudio.xiaomimimo.com"
+const platformBase = "https://platform.xiaomimimo.com"
 
 type Client struct {
 	httpClient *http.Client
@@ -151,4 +152,51 @@ func (c *Client) HealthCheck(cookie string) (bool, string) {
 func MD5(data []byte) string {
 	h := md5.Sum(data)
 	return hex.EncodeToString(h[:])
+}
+
+type BalanceResponse struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data struct {
+		TotalBalance   string `json:"totalBalance"`
+		RemainBalance  string `json:"remainBalance"`
+		UsedBalance    string `json:"usedBalance"`
+		Currency       string `json:"currency"`
+		FreeQuota      string `json:"freeQuota"`
+		UsedFreeQuota  string `json:"usedFreeQuota"`
+		RemainFreeQuota string `json:"remainFreeQuota"`
+	} `json:"data"`
+}
+
+func (c *Client) GetBalance(cookie string) (*BalanceResponse, error) {
+	apiURL := platformBase + "/api/v1/balance"
+
+	httpReq, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Accept", "*/*")
+	httpReq.Header.Set("Accept-Language", "en")
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Referer", platformBase+"/console/balance")
+	httpReq.Header.Set("x-timezone", "Asia/Jakarta")
+	httpReq.Header.Set("Cookie", cookie)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var balanceResp BalanceResponse
+	if err := json.Unmarshal(body, &balanceResp); err != nil {
+		return nil, err
+	}
+
+	return &balanceResp, nil
 }
