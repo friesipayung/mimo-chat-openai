@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  mimo-proxy:
+    build: .
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./data:/data
+    environment:
+      - ADMIN_PASSWORD=12345678
+      - LISTEN=:8090
+      - DB_PATH=/data/mimo.db
+    restart: unless-stopped
