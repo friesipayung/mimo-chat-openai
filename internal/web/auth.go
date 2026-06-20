@@ -92,6 +92,7 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		MaxAge:   86400,
 		SameSite: http.SameSiteLaxMode,
+		Secure:   false, // Set to true when using HTTPS
 	})
 
 	writeJSON(w, 200, map[string]string{"status": "ok"})

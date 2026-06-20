@@ -52,6 +52,12 @@ func (h *APIKeyHandler) HandleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Input validation
+	if len(req.Name) > 100 {
+		writeJSON(w, 400, map[string]string{"error": "name too long (max 100 chars)"})
+		return
+	}
+
 	key := generateKey()
 	id, err := h.db.AddAPIKey(req.Name, key)
 	if err != nil {

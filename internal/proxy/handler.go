@@ -63,8 +63,15 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	apiKeyName := r.Header.Get("X-API-Key-Name")
 	apiKey := r.Header.Get("X-API-Key")
 
+	// Limit request body size to 50MB (for base64 images)
+	r.Body = http.MaxBytesReader(w, r.Body, 50<<20)
+
 	var req types.ChatCompletionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err.Error() == "http: request body too large" {
+			writeError(w, http.StatusRequestEntityTooLarge, "request body too large (max 50MB)")
+			return
+		}
 		writeError(w, http.StatusBadRequest, "invalid json")
 		return
 	}

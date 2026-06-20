@@ -170,13 +170,37 @@ func main() {
 		})
 	}
 
+	// Add security headers middleware
+	handler := addSecurityHeaders(mux)
+
 	log.Printf("Starting mimo-chat-openai on %s", cfg.ListenAddr)
 	log.Printf("Web UI: http://localhost%s/ui/", cfg.ListenAddr)
 	log.Printf("API: http://localhost%s/v1/chat/completions", cfg.ListenAddr)
 
-	if err := http.ListenAndServe(cfg.ListenAddr, mux); err != nil {
+	if err := http.ListenAndServe(cfg.ListenAddr, handler); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
+}
+
+func addSecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Security headers
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+
+		// Content Security Policy - allow CDN for Tailwind, Vue, fonts
+		csp := "default-src 'self'; " +
+			"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com; " +
+			"style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; " +
+			"font-src 'self' https://fonts.gstatic.com; " +
+			"img-src 'self' data: https:; " +
+			"connect-src 'self'"
+		w.Header().Set("Content-Security-Policy", csp)
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 const llmsTxt = `# mimo-chat-openai - OpenAI-Compatible API Proxy

@@ -58,6 +58,16 @@ func (h *CookieHandler) HandleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Input validation
+	if len(req.Alias) > 100 {
+		writeJSON(w, 400, map[string]string{"error": "alias too long (max 100 chars)"})
+		return
+	}
+	if len(req.FullCookie) > 10000 {
+		writeJSON(w, 400, map[string]string{"error": "cookie too long (max 10000 chars)"})
+		return
+	}
+
 	if req.FullCookie != "" {
 		st, uid, ph := mimo.ParseCookieParts(req.FullCookie)
 		req.ServiceToken = st
