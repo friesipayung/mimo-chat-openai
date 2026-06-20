@@ -234,7 +234,48 @@ Response includes `reasoning_content`:
 }
 ```
 
-### 5. OpenAI Python SDK
+### 5. Image Understanding (Multimodal)
+
+```bash
+# With image URL
+curl -X POST http://localhost:8090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-xxxx..." \
+  -d '{
+    "model": "mimo-v2.5",
+    "messages": [{
+      "role": "user",
+      "content": [
+        {"type": "image_url", "image_url": {"url": "https://example.com/image.jpg"}},
+        {"type": "text", "text": "Describe this image"}
+      ]
+    }]
+  }'
+
+# With base64 image
+curl -X POST http://localhost:8090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-xxxx..." \
+  -d '{
+    "model": "mimo-v2.5",
+    "messages": [{
+      "role": "user",
+      "content": [
+        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/4AAQ..."}},
+        {"type": "text", "text": "What is in this image?"}
+      ]
+    }]
+  }'
+```
+
+**Supported models for multimodal:** `mimo-v2.5`, `mimo-v2-omni`
+
+**Supported media types:**
+- Images: JPEG, PNG, GIF, WebP, BMP (max 50MB)
+- Audio: MP3, WAV, FLAC, M4A, OGG (max 100MB)
+- Video: MP4, MOV, AVI, WMV (max 300MB)
+
+### 6. OpenAI Python SDK
 
 ```python
 from openai import OpenAI
@@ -259,9 +300,22 @@ response = client.chat.completions.create(
 )
 print(response.choices[0].message.reasoning_content)
 print(response.choices[0].message.content)
+
+# With image
+response = client.chat.completions.create(
+    model="mimo-v2.5",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "image_url", "image_url": {"url": "https://example.com/photo.jpg"}},
+            {"type": "text", "text": "What's in this image?"}
+        ]
+    }]
+)
+print(response.choices[0].message.content)
 ```
 
-### 6. List Models
+### 7. List Models
 
 ```bash
 curl http://localhost:8090/v1/models
