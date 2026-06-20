@@ -51,8 +51,9 @@ func (h *Handler) RequireAPIKey(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Store key name in context for logging
+		// Store key name and key value for logging and usage tracking
 		r.Header.Set("X-API-Key-Name", key.Name)
+		r.Header.Set("X-API-Key", apiKey)
 		next(w, r)
 	}
 }
@@ -60,6 +61,7 @@ func (h *Handler) RequireAPIKey(next http.HandlerFunc) http.HandlerFunc {
 func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	apiKeyName := r.Header.Get("X-API-Key-Name")
+	apiKey := r.Header.Get("X-API-Key")
 
 	var req types.ChatCompletionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -122,13 +124,13 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Stream {
-		h.handleStream(w, resp, req.Model, cookie, apiKeyName, start)
+		h.handleStream(w, resp, req.Model, cookie, apiKeyName, apiKey, start)
 	} else {
-		h.handleSync(w, resp, req.Model, cookie, apiKeyName, start)
+		h.handleSync(w, resp, req.Model, cookie, apiKeyName, apiKey, start)
 	}
 }
 
-func (h *Handler) handleStream(w http.ResponseWriter, resp *http.Response, model string, cookie *db.Cookie, apiKeyName string, start time.Time) {
+func (h *Handler) handleStream(w http.ResponseWriter, resp *http.Response, model string, cookie *db.Cookie, apiKeyName, apiKey string, start time.Time) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		writeError(w, http.StatusInternalServerError, "streaming not supported")
@@ -143,10 +145,11 @@ func (h *Handler) handleStream(w http.ResponseWriter, resp *http.Response, model
 	mimo.StreamToOpenAI(resp.Body, model, w, func() { flusher.Flush() })
 
 	h.db.UpdateCookieUsage(cookie.ID, 0)
+	h.db.UpdateAPIKeyUsage(apiKey)
 	h.logRequest(cookie, apiKeyName, model, 0, 0, 200, "", start)
 }
 
-func (h *Handler) handleSync(w http.ResponseWriter, resp *http.Response, model string, cookie *db.Cookie, apiKeyName string, start time.Time) {
+func (h *Handler) handleSync(w http.ResponseWriter, resp *http.Response, model string, cookie *db.Cookie, apiKeyName, apiKey string, start time.Time) {
 	result, err := mimo.CollectSync(resp.Body, model)
 	if err != nil {
 		h.logRequest(cookie, apiKeyName, model, 0, 0, 502, err.Error(), start)
@@ -156,9 +159,11 @@ func (h *Handler) handleSync(w http.ResponseWriter, resp *http.Response, model s
 
 	if result.Usage != nil {
 		h.db.UpdateCookieUsage(cookie.ID, result.Usage.TotalTokens)
+		h.db.UpdateAPIKeyUsage(apiKey)
 		h.logRequest(cookie, apiKeyName, model, result.Usage.PromptTokens, result.Usage.CompletionTokens, 200, "", start)
 	} else {
 		h.db.UpdateCookieUsage(cookie.ID, 0)
+		h.db.UpdateAPIKeyUsage(apiKey)
 		h.logRequest(cookie, apiKeyName, model, 0, 0, 200, "", start)
 	}
 
