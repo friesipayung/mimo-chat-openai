@@ -1,6 +1,8 @@
 services:
   mimo-proxy:
-    build: .
+    image: ghcr.io/friesipayung/mimo-chat-openai:latest
+    # Uncomment below to build locally instead
+    # build: .
     ports:
       - "8090:8090"
     volumes:
