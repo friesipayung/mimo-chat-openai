@@ -56,7 +56,8 @@ func main() {
 	// LLMs.txt - API documentation for AI agents
 	mux.HandleFunc("/llms.txt", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Write([]byte(llmsTxt))
+		content := strings.ReplaceAll(llmsTxt, "http://localhost:8090", cfg.GetBaseURL())
+		w.Write([]byte(content))
 	})
 
 	// Protected API endpoint (API key required)
