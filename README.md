@@ -4,14 +4,37 @@
 
 Xiaomi MiMo Web → OpenAI-compatible API proxy with built-in Web UI management.
 
-## Disclaimer
+## Legal Disclaimer
 
-- This project is for **learning and research purposes only**
-- It reverse-engineers the Xiaomi MiMo Studio web interface (`aistudio.xiaomimimo.com`)
-- **Not affiliated with Xiaomi** in any way
-- **Not for commercial use**
-- Use at your own risk — may violate Xiaomi's Terms of Service
-- No warranty, no support, no liability
+### No Affiliation
+
+This project is **NOT** affiliated with, endorsed by, sponsored by, or approved by Xiaomi Corporation or any of its subsidiaries. "Xiaomi", "MiMo", and related trademarks are property of their respective owners.
+
+### Terms of Service
+
+This tool interacts with Xiaomi MiMo Studio web interface by reverse-engineering the browser API. **This may violate Xiaomi's Terms of Service.** Users are solely responsible for:
+
+- Complying with Xiaomi's Terms of Service
+- Any consequences of using this tool
+- Securing their own Xiaomi account credentials
+
+### No Warranty
+
+This software is provided "AS IS" without warranty of any kind. The authors are not responsible for any damages, losses, or legal consequences arising from use.
+
+### Educational Purpose
+
+This project is created for **educational and research purposes only**. It is not intended for commercial use or production environments.
+
+### Cookie Security
+
+Users are responsible for securing their own cookies and account credentials. The authors cannot access, store, or misuse any user credentials.
+
+### Risk Notice
+
+- **Xiaomi can ban your account** — They can detect unusual API patterns
+- **ToS violation is still a risk** — Disclaimers don't make it "legal"
+- **If you commercialize this** — All protection drops significantly
 
 ## What It Does
 
@@ -453,7 +476,9 @@ mimo-chat-openai/
 
 ## License
 
-MIT — For educational purposes only.
+MIT License — See [LICENSE](LICENSE) for details.
+
+For educational purposes only. Not for commercial use.
 
 ## Related Projects
 
@@ -464,4 +489,12 @@ MIT — For educational purposes only.
 
 ## Legal
 
-This project is not endorsed by, directly affiliated with, maintained, authorized, or sponsored by Xiaomi. All product names, logos, and brands are property of their respective owners.
+This project is an independent, community-developed tool and is **NOT** affiliated with, endorsed by, sponsored by, or approved by Xiaomi Corporation or any of its subsidiaries.
+
+**Trademarks:** Xiaomi®, MiMo®, and related marks are trademarks of Xiaomi Inc.
+
+**No Warranty:** This software is provided "AS IS" without warranty of any kind.
+
+**User Responsibility:** Users are solely responsible for complying with Xiaomi's Terms of Service and securing their own account credentials.
+
+See [NOTICE](NOTICE) for full legal notice.
