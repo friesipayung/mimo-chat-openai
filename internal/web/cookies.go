@@ -260,8 +260,8 @@ func (h *CookieHandler) HandleCheckBalance(w http.ResponseWriter, r *http.Reques
 			h.db.UpdateCookieBalance(id, "error", "")
 			return
 		}
-		if balanceResp.Code == 0 && balanceResp.Data.RemainBalance != "" {
-			h.db.UpdateCookieBalance(id, balanceResp.Data.RemainBalance, balanceResp.Data.Currency)
+		if balanceResp.Code == 0 && balanceResp.Data.Balance != "" {
+			h.db.UpdateCookieBalance(id, balanceResp.Data.Balance, balanceResp.Data.Currency)
 		} else {
 			h.db.UpdateCookieBalance(id, "N/A", "")
 		}
@@ -284,8 +284,8 @@ func (h *CookieHandler) HandleCheckBalanceAll(w http.ResponseWriter, r *http.Req
 				h.db.UpdateCookieBalance(cookie.ID, "error", "")
 				return
 			}
-			if balanceResp.Code == 0 && balanceResp.Data.RemainBalance != "" {
-				h.db.UpdateCookieBalance(cookie.ID, balanceResp.Data.RemainBalance, balanceResp.Data.Currency)
+			if balanceResp.Code == 0 && balanceResp.Data.Balance != "" {
+				h.db.UpdateCookieBalance(cookie.ID, balanceResp.Data.Balance, balanceResp.Data.Currency)
 			} else {
 				h.db.UpdateCookieBalance(cookie.ID, "N/A", "")
 			}

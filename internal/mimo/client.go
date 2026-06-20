@@ -156,15 +156,15 @@ func MD5(data []byte) string {
 
 type BalanceResponse struct {
 	Code int    `json:"code"`
-	Msg  string `json:"msg"`
+	Msg  string `json:"message"`
 	Data struct {
-		TotalBalance   string `json:"totalBalance"`
-		RemainBalance  string `json:"remainBalance"`
-		UsedBalance    string `json:"usedBalance"`
-		Currency       string `json:"currency"`
-		FreeQuota      string `json:"freeQuota"`
-		UsedFreeQuota  string `json:"usedFreeQuota"`
-		RemainFreeQuota string `json:"remainFreeQuota"`
+		Balance              string `json:"balance"`
+		FrozenBalance        string `json:"frozenBalance"`
+		Currency             string `json:"currency"`
+		OverdraftLimit       string `json:"overdraftLimit"`
+		RemainingOverdraftLimit string `json:"remainingOverdraftLimit"`
+		GiftBalance          string `json:"giftBalance"`
+		CashBalance          string `json:"cashBalance"`
 	} `json:"data"`
 }
 
