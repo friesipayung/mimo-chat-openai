@@ -2,6 +2,8 @@ package proxy
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -31,7 +33,6 @@ func (h *Handler) HandleModels(w http.ResponseWriter, r *http.Request) {
 // RequireAPIKey middleware - validates API key from Authorization header
 func (h *Handler) RequireAPIKey(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract API key from Authorization: Bearer <key>
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			writeError(w, http.StatusUnauthorized, "missing Authorization header. Use: Authorization: Bearer <api_key>")
@@ -51,7 +52,6 @@ func (h *Handler) RequireAPIKey(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Store key name and key value for logging and usage tracking
 		r.Header.Set("X-API-Key-Name", key.Name)
 		r.Header.Set("X-API-Key", apiKey)
 		next(w, r)
@@ -76,7 +76,6 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mimoModel := types.ModelIDToStudio(req.Model)
-	query := buildQuery(req.Messages)
 
 	temp := 0.8
 	if req.Temperature != nil {
@@ -87,11 +86,20 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		topP = *req.TopP
 	}
 
-	// Determine thinking mode
-	// Default: enabled for all models except mimo-v2-flash
 	enableThinking := mimoModel != "mimo-v2-flash-studio" && mimoModel != "mimo-v2-omni"
 	if req.Thinking != nil {
 		enableThinking = req.Thinking.Type == "enabled"
+	}
+
+	// Process messages for multimodal content
+	query, medias, err := h.processMessages(cookie.FullCookie, req.Messages, mimoModel)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "error processing messages: "+err.Error())
+		return
+	}
+
+	if medias == nil {
+		medias = []interface{}{}
 	}
 
 	mimoReq := mimo.MiMoRequest{
@@ -106,7 +114,7 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 			Temperature:     temp,
 			TopP:            topP,
 		},
-		MultiMedias: []interface{}{},
+		MultiMedias: medias,
 	}
 
 	resp, err := h.client.Chat(cookie.FullCookie, mimoReq)
@@ -118,8 +126,9 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		h.logRequest(cookie, apiKeyName, req.Model, 0, 0, resp.StatusCode, "upstream status error", start)
-		writeError(w, http.StatusBadGateway, "upstream returned status "+resp.Status)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		h.logRequest(cookie, apiKeyName, req.Model, 0, 0, resp.StatusCode, string(bodyBytes), start)
+		writeError(w, http.StatusBadGateway, fmt.Sprintf("upstream returned status %d: %s", resp.StatusCode, string(bodyBytes)))
 		return
 	}
 
@@ -128,6 +137,164 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	} else {
 		h.handleSync(w, resp, req.Model, cookie, apiKeyName, apiKey, start)
 	}
+}
+
+// processMessages handles multimodal content and returns the query string and media items
+func (h *Handler) processMessages(cookie string, messages []types.ChatMessage, model string) (string, []interface{}, error) {
+	var parts []string
+	var medias []interface{}
+
+	for _, msg := range messages {
+		content := msg.Content
+		text := ""
+
+		// Check if content is a multipart array
+		if contentArr, ok := content.([]interface{}); ok {
+			for _, item := range contentArr {
+				contentMap, ok := item.(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				contentType, _ := contentMap["type"].(string)
+
+				switch contentType {
+				case "text":
+					if t, ok := contentMap["text"].(string); ok {
+						text += t
+					}
+
+				case "image_url":
+					if imageURL, ok := contentMap["image_url"].(map[string]interface{}); ok {
+						if urlStr, ok := imageURL["url"].(string); ok {
+							media, err := h.processMediaURL(cookie, urlStr, "image", model)
+							if err != nil {
+								return "", nil, fmt.Errorf("error processing image: %w", err)
+							}
+							if media != nil {
+								medias = append(medias, media)
+							}
+						}
+					}
+
+				case "input_audio":
+					if audioData, ok := contentMap["input_audio"].(map[string]interface{}); ok {
+						if urlStr, ok := audioData["data"].(string); ok {
+							media, err := h.processMediaURL(cookie, urlStr, "audio", model)
+							if err != nil {
+								return "", nil, fmt.Errorf("error processing audio: %w", err)
+							}
+							if media != nil {
+								medias = append(medias, media)
+							}
+						}
+					}
+
+				case "video_url":
+					if videoURL, ok := contentMap["video_url"].(map[string]interface{}); ok {
+						if urlStr, ok := videoURL["url"].(string); ok {
+							media, err := h.processMediaURL(cookie, urlStr, "video", model)
+							if err != nil {
+								return "", nil, fmt.Errorf("error processing video: %w", err)
+							}
+							if media != nil {
+								medias = append(medias, media)
+							}
+						}
+					}
+				}
+			}
+		} else {
+			// Simple string content
+			text = types.ExtractText(content)
+		}
+
+		if text != "" {
+			switch msg.Role {
+			case "system":
+				parts = append(parts, "System: "+text)
+			case "user":
+				parts = append(parts, "Human: "+text)
+			case "assistant":
+				parts = append(parts, "Assistant: "+text)
+			default:
+				parts = append(parts, msg.Role+": "+text)
+			}
+		}
+	}
+
+	return strings.Join(parts, "\n"), medias, nil
+}
+
+// processMediaURL handles a media URL (either base64 or HTTP URL)
+func (h *Handler) processMediaURL(cookie string, urlStr string, mediaType string, model string) (interface{}, error) {
+	if strings.HasPrefix(urlStr, "data:") {
+		// Base64 encoded data - upload to FDS
+		data, mime, err := mimo.ParseBase64Image(urlStr)
+		if err != nil {
+			return nil, err
+		}
+
+		ext := mimo.GetMimeExt(mime)
+		fileName := mimo.RandHex(8) + ext
+		detectedType := mimo.GetMediaTypeFromMime(mime)
+
+		media, err := h.client.UploadFile(cookie, data, fileName, detectedType, model)
+		if err != nil {
+			return nil, err
+		}
+
+		return media, nil
+	}
+
+	// HTTP URL - download and upload to FDS
+	data, fileName, err := h.downloadFile(urlStr)
+	if err != nil {
+		return nil, fmt.Errorf("error downloading file: %w", err)
+	}
+
+	media, err := h.client.UploadFile(cookie, data, fileName, mediaType, model)
+	if err != nil {
+		return nil, err
+	}
+
+	return media, nil
+}
+
+// downloadFile downloads a file from a URL and returns the data and filename
+func (h *Handler) downloadFile(urlStr string) ([]byte, string, error) {
+	resp, err := http.Get(urlStr)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, "", fmt.Errorf("download failed with status %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Extract filename from URL or generate one
+	fileName := ""
+	parts := strings.Split(urlStr, "/")
+	if len(parts) > 0 {
+		lastPart := parts[len(parts)-1]
+		if idx := strings.Index(lastPart, "?"); idx > 0 {
+			lastPart = lastPart[:idx]
+		}
+		if lastPart != "" {
+			fileName = lastPart
+		}
+	}
+	if fileName == "" {
+		fileName = mimo.RandHex(8) + ".bin"
+	}
+
+	return data, fileName, nil
 }
 
 func (h *Handler) handleStream(w http.ResponseWriter, resp *http.Response, model string, cookie *db.Cookie, apiKeyName, apiKey string, start time.Time) {
@@ -191,24 +358,6 @@ func (h *Handler) logRequest(cookie *db.Cookie, apiKeyName, model string, prompt
 		Error:            errMsg,
 		DurationMs:       int(time.Since(start).Milliseconds()),
 	})
-}
-
-func buildQuery(messages []types.ChatMessage) string {
-	var parts []string
-	for _, m := range messages {
-		text := types.ExtractText(m.Content)
-		switch m.Role {
-		case "system":
-			parts = append(parts, "System: "+text)
-		case "user":
-			parts = append(parts, "Human: "+text)
-		case "assistant":
-			parts = append(parts, "Assistant: "+text)
-		default:
-			parts = append(parts, m.Role+": "+text)
-		}
-	}
-	return strings.Join(parts, "\n")
 }
 
 func writeError(w http.ResponseWriter, code int, message string) {
