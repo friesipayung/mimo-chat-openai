@@ -60,8 +60,25 @@ func main() {
 		w.Write([]byte(content))
 	})
 
-	// Protected API endpoint (API key required)
-	mux.HandleFunc("/v1/chat/completions", proxyHandler.RequireAPIKey(proxyHandler.HandleChat))
+	// Protected API endpoint (API key required or static token)
+	if cfg.HasAPIToken() {
+		// If static token is set, use it for authentication
+		mux.HandleFunc("/v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
+			auth := r.Header.Get("Authorization")
+			if auth != "Bearer "+cfg.APIToken {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(401)
+				w.Write([]byte(`{"error":{"message":"unauthorized","type":"invalid_request_error"}}`))
+				return
+			}
+			r.Header.Set("X-API-Key-Name", "static-token")
+			r.Header.Set("X-API-Key", cfg.APIToken)
+			proxyHandler.HandleChat(w, r)
+		})
+	} else {
+		// Otherwise require API key from database
+		mux.HandleFunc("/v1/chat/completions", proxyHandler.RequireAPIKey(proxyHandler.HandleChat))
+	}
 
 	// Auth endpoints
 	mux.HandleFunc("/api/auth/login", authHandler.HandleLogin)
