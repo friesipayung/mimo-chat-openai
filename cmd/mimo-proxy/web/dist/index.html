@@ -14,33 +14,10 @@
             extend: {
                 fontFamily: { sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'] },
                 colors: {
-                    brand: {
-                        50: '#E6F4FA',
-                        100: '#B3DFF2',
-                        200: '#80CAEB',
-                        300: '#4DB5E3',
-                        400: '#1AA0DC',
-                        500: '#0096D6',
-                        600: '#0073A6',
-                        700: '#005A82',
-                        800: '#00415E',
-                        900: '#002B5B',
-                    },
-                    sidebar: {
-                        bg: '#1A1A2E',
-                        hover: '#252542',
-                        active: '#0096D6',
-                        text: '#A0AEC0',
-                        'text-active': '#FFFFFF',
-                    },
-                    surface: {
-                        page: '#F8F9FA',
-                        card: '#FFFFFF',
-                        stripe: '#FAFAFA',
-                    },
-                    success: '#00A854',
-                    danger: '#E34234',
-                    warning: '#FFC107',
+                    brand: { 50: '#E6F4FA', 100: '#B3DFF2', 200: '#80CAEB', 300: '#4DB5E3', 400: '#1AA0DC', 500: '#0096D6', 600: '#0073A6', 700: '#005A82', 800: '#00415E', 900: '#002B5B' },
+                    sidebar: { bg: '#1A1A2E', hover: '#252542', active: '#0096D6', text: '#A0AEC0', 'text-active': '#FFFFFF' },
+                    surface: { page: '#F8F9FA', card: '#FFFFFF' },
+                    success: '#00A854', danger: '#E34234', warning: '#FFC107',
                 }
             }
         }
@@ -49,47 +26,21 @@
     <style>
         [v-cloak] { display: none; }
         .sidebar-item { position: relative; }
-        .sidebar-item.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 4px;
-            bottom: 4px;
-            width: 3px;
-            background: #0096D6;
-            border-radius: 0 2px 2px 0;
-        }
+        .sidebar-item.active::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; background: #0096D6; border-radius: 0 2px 2px 0; }
         .card-hover { transition: box-shadow 0.2s ease, transform 0.2s ease; }
         .card-hover:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateY(-1px); }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(0,150,214,0.15);
-            border-color: #0096D6;
-        }
+        input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(0,150,214,0.15); border-color: #0096D6; }
         .table-hover tr:hover td { background-color: #F1F3F5; }
-        .chevron::after {
-            content: '';
-            display: inline-block;
-            width: 6px;
-            height: 6px;
-            border-right: 2px solid currentColor;
-            border-bottom: 2px solid currentColor;
-            transform: rotate(-45deg);
-            margin-left: 8px;
-            opacity: 0.5;
-        }
     </style>
 </head>
 <body class="bg-surface-page font-sans antialiased">
     <div id="app" v-cloak></div>
-
     <script>
-    const { createApp, ref, reactive, onMounted, computed, watch } = Vue;
+    const { createApp, ref, reactive, onMounted, computed } = Vue;
     const { createRouter, createWebHashHistory, useRouter, useRoute } = VueRouter;
 
-    // API
     const api = {
         async get(url) { const r = await fetch(url, { credentials: 'include' }); if (r.status === 401) throw new Error('unauthorized'); return r.json(); },
         async post(url, d) { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(d) }); if (r.status === 401) throw new Error('unauthorized'); return r.json(); },
@@ -97,21 +48,22 @@
         async del(url) { const r = await fetch(url, { method: 'DELETE', credentials: 'include' }); return r.json(); }
     };
 
-    // Icons
-    const icons = {
-        dashboard: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10-2a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z"/></svg>`,
-        cookie: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`,
-        config: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-        logs: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>`,
-        logout: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>`,
-        check: `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`,
-        refresh: `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>`,
-        plus: `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>`,
-        trash: `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
-        user: `<svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+    const I = {
+        dash: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10-2a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z"/></svg>',
+        lock: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>',
+        key: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>',
+        gear: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>',
+        log: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>',
+        out: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>',
+        chk: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
+        ref: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>',
+        plus: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>',
+        trash: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>',
+        copy: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>',
+        eye: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>',
+        eyeOff: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>',
     };
 
-    // Login
     const Login = {
         template: `
         <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-sidebar-bg via-gray-900 to-brand-900">
@@ -125,40 +77,28 @@
                 </div>
                 <div class="bg-white rounded-xl shadow-2xl p-8">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Admin Password</label>
-                    <input v-model="password" type="password" placeholder="Enter password"
-                        class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm transition-all"
-                        @keyup.enter="login">
-                    <button @click="login"
-                        class="w-full mt-4 bg-brand-500 text-white py-3 rounded-lg font-medium hover:bg-brand-600 transition-colors active:scale-[0.98]">
-                        Sign In
-                    </button>
-                    <p v-if="error" class="text-danger text-sm text-center mt-3">{{ error }}</p>
+                    <input v-model="pw" type="password" placeholder="Enter password" class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm" @keyup.enter="login">
+                    <button @click="login" class="w-full mt-4 bg-brand-500 text-white py-3 rounded-lg font-medium hover:bg-brand-600 transition-colors">Sign In</button>
+                    <p v-if="err" class="text-danger text-sm text-center mt-3">{{ err }}</p>
                 </div>
                 <p class="text-center text-gray-500 text-xs mt-6">Experimental & Educational Purpose Only</p>
             </div>
         </div>`,
         setup() {
             const router = useRouter();
-            const password = ref('');
-            const error = ref('');
+            const pw = ref(''); const err = ref('');
             const login = async () => {
-                try {
-                    const res = await api.post('/api/auth/login', { password: password.value });
-                    if (res.status === 'ok') router.push('/dashboard');
-                    else error.value = 'Invalid password';
-                } catch { error.value = 'Invalid password'; }
+                try { const r = await api.post('/api/auth/login', { password: pw.value }); if (r.status === 'ok') router.push('/dashboard'); else err.value = 'Invalid password'; }
+                catch { err.value = 'Invalid password'; }
             };
-            return { password, error, login };
+            return { pw, err, login };
         }
     };
 
-    // Layout
     const Layout = {
         template: `
         <div class="flex min-h-screen">
-            <!-- Sidebar -->
             <aside class="w-[260px] bg-sidebar-bg flex flex-col flex-shrink-0">
-                <!-- Logo -->
                 <div class="px-6 py-5 border-b border-white/5">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-lg bg-brand-500 flex items-center justify-center">
@@ -170,429 +110,295 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Navigation -->
                 <nav class="flex-1 px-3 py-4 space-y-1">
-                    <router-link v-for="item in navItems" :key="item.path" :to="item.path"
+                    <router-link v-for="n in nav" :key="n.p" :to="n.p"
                         class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
-                        :class="$route.path === item.path ? 'active bg-brand-500/10 text-sidebar-text-active' : 'text-sidebar-text hover:bg-sidebar-hover hover:text-white'">
-                        <span v-html="item.icon" class="flex-shrink-0"></span>
-                        <span>{{ item.label }}</span>
+                        :class="$route.path === n.p ? 'active bg-brand-500/10 text-sidebar-text-active' : 'text-sidebar-text hover:bg-sidebar-hover hover:text-white'">
+                        <span v-html="n.i"></span><span>{{ n.l }}</span>
                     </router-link>
                 </nav>
-
-                <!-- Footer -->
                 <div class="px-3 py-4 border-t border-white/5">
-                    <button @click="logout"
-                        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-text hover:bg-sidebar-hover hover:text-white transition-all w-full">
-                        <span v-html="icons.logout"></span>
-                        <span>Sign Out</span>
+                    <button @click="logout" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-text hover:bg-sidebar-hover hover:text-white transition-all w-full">
+                        <span v-html="I.out"></span><span>Sign Out</span>
                     </button>
                 </div>
             </aside>
-
-            <!-- Main -->
-            <main class="flex-1 overflow-auto">
-                <div class="max-w-6xl mx-auto px-6 py-8">
-                    <router-view></router-view>
-                </div>
-            </main>
+            <main class="flex-1 overflow-auto"><div class="max-w-6xl mx-auto px-6 py-8"><router-view></router-view></div></main>
         </div>`,
         setup() {
             const router = useRouter();
-            const navItems = [
-                { path: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
-                { path: '/cookies', label: 'Cookies', icon: icons.cookie },
-                { path: '/config', label: 'Configuration', icon: icons.config },
-                { path: '/logs', label: 'Request Logs', icon: icons.logs },
+            const nav = [
+                { p: '/dashboard', l: 'Dashboard', i: I.dash },
+                { p: '/cookies', l: 'Cookies', i: I.lock },
+                { p: '/keys', l: 'API Keys', i: I.key },
+                { p: '/config', l: 'Configuration', i: I.gear },
+                { p: '/logs', l: 'Request Logs', i: I.log },
             ];
-            const logout = async () => {
-                await api.post('/api/auth/logout', {});
-                router.push('/');
-            };
-            return { navItems, icons, logout };
+            const logout = async () => { await api.post('/api/auth/logout', {}); router.push('/'); };
+            return { nav, I, logout };
         }
     };
 
-    // Dashboard
     const Dashboard = {
         template: `
         <div>
-            <div class="mb-6">
-                <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-                <p class="text-gray-500 text-sm mt-1">Monitor proxy usage and performance</p>
-            </div>
-
-            <!-- Stats Grid -->
+            <div class="mb-6"><h1 class="text-2xl font-bold text-gray-900">Dashboard</h1><p class="text-gray-500 text-sm mt-1">Monitor proxy usage and performance</p></div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div v-for="card in statCards" :key="card.label"
-                    class="bg-white rounded-lg border border-gray-100 p-5 card-hover"
-                    :class="'border-l-4 border-l-' + card.color">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-gray-400" v-html="card.icon"></span>
-                    </div>
-                    <div class="text-2xl font-bold text-gray-900">{{ card.value }}</div>
-                    <div class="text-sm text-gray-500 mt-1">{{ card.label }}</div>
+                <div v-for="c in cards" :key="c.l" class="bg-white rounded-lg border border-gray-100 p-5 card-hover" :class="'border-l-4 ' + c.b">
+                    <div class="text-2xl font-bold text-gray-900">{{ c.v }}</div>
+                    <div class="text-sm text-gray-500 mt-1">{{ c.l }}</div>
                 </div>
             </div>
-
-            <!-- Quick Info -->
             <div class="bg-white rounded-lg border border-gray-100 p-6">
-                <h3 class="font-semibold text-gray-900 mb-4">API Endpoint</h3>
-                <div class="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700 flex items-center justify-between">
-                    <span>POST /v1/chat/completions</span>
-                    <button @click="copyEndpoint" class="text-brand-500 hover:text-brand-600 text-xs font-medium">
-                        {{ copied ? 'Copied!' : 'Copy' }}
-                    </button>
+                <h3 class="font-semibold text-gray-900 mb-4">API Usage</h3>
+                <div class="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700">
+                    <div class="mb-2"><span class="text-gray-500">Endpoint:</span> <span class="ml-2">POST {{ origin }}/v1/chat/completions</span></div>
+                    <div><span class="text-gray-500">Auth:</span> <span class="ml-2">Authorization: Bearer &lt;api_key&gt;</span></div>
                 </div>
-                <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <span class="text-gray-500">Base URL:</span>
-                        <span class="ml-2 font-mono text-gray-700">{{ origin }}/v1</span>
-                    </div>
-                    <div>
-                        <span class="text-gray-500">Auth:</span>
-                        <span class="ml-2 font-mono text-gray-700">Bearer {api_token}</span>
-                    </div>
-                </div>
+                <p class="text-xs text-gray-400 mt-3">Create API keys in the API Keys page. Keys are required for all chat requests.</p>
             </div>
         </div>`,
         setup() {
-            const stats = ref({});
-            const copied = ref(false);
-            const origin = window.location.origin;
-
-            onMounted(async () => { stats.value = await api.get('/api/stats'); });
-
-            const statCards = computed(() => [
-                { label: 'Total Cookies', value: stats.value.total_cookies || 0, color: 'brand-500', icon: icons.cookie },
-                { label: 'Active Cookies', value: stats.value.active_cookies || 0, color: 'success', icon: icons.check },
-                { label: 'Today Requests', value: stats.value.today_requests || 0, color: 'brand-400', icon: icons.logs },
-                { label: 'Success Rate', value: (stats.value.success_rate || 0).toFixed(1) + '%', color: 'success', icon: icons.check },
+            const s = ref({}); const origin = window.location.origin;
+            onMounted(async () => { s.value = await api.get('/api/stats'); });
+            const cards = computed(() => [
+                { l: 'Total Cookies', v: s.value.total_cookies || 0, b: 'border-brand-500' },
+                { l: 'Active', v: s.value.active_cookies || 0, b: 'border-success' },
+                { l: 'Today Requests', v: s.value.today_requests || 0, b: 'border-brand-400' },
+                { l: 'Success Rate', v: (s.value.success_rate || 0).toFixed(1) + '%', b: 'border-success' },
             ]);
-
-            const copyEndpoint = () => {
-                navigator.clipboard.writeText(origin + '/v1/chat/completions');
-                copied.value = true;
-                setTimeout(() => { copied.value = false; }, 2000);
-            };
-
-            return { stats, statCards, copied, origin, copyEndpoint };
+            return { s, cards, origin };
         }
     };
 
-    // Cookies
     const Cookies = {
         template: `
         <div>
             <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Cookies</h1>
-                    <p class="text-gray-500 text-sm mt-1">Manage Xiaomi account cookies</p>
-                </div>
+                <div><h1 class="text-2xl font-bold text-gray-900">Cookies</h1><p class="text-gray-500 text-sm mt-1">Manage Xiaomi account cookies</p></div>
                 <div class="flex gap-2">
-                    <button @click="checkAll"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <span v-html="icons.refresh"></span> Check All
-                    </button>
-                    <button @click="showAdd = !showAdd"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors">
-                        <span v-html="icons.plus"></span> Add Cookie
-                    </button>
+                    <button @click="checkAll" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50"><span v-html="I.ref"></span> Check All</button>
+                    <button @click="show=!show" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-brand-500 text-white rounded-lg hover:bg-brand-600"><span v-html="I.plus"></span> Add Cookie</button>
                 </div>
             </div>
-
-            <!-- Add Cookie Panel -->
-            <div v-if="showAdd" class="bg-white rounded-lg border border-gray-100 p-6 mb-6">
+            <div v-if="show" class="bg-white rounded-lg border border-gray-100 p-6 mb-6">
                 <div class="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
-                    <button @click="addMode = 'single'"
-                        :class="addMode === 'single' ? 'bg-white shadow text-gray-900' : 'text-gray-500'"
-                        class="px-4 py-2 rounded-md text-sm font-medium transition-all">Single</button>
-                    <button @click="addMode = 'bulk'"
-                        :class="addMode === 'bulk' ? 'bg-white shadow text-gray-900' : 'text-gray-500'"
-                        class="px-4 py-2 rounded-md text-sm font-medium transition-all">Bulk</button>
+                    <button @click="mode='s'" :class="mode==='s'?'bg-white shadow text-gray-900':'text-gray-500'" class="px-4 py-2 rounded-md text-sm font-medium transition-all">Single</button>
+                    <button @click="mode='b'" :class="mode==='b'?'bg-white shadow text-gray-900':'text-gray-500'" class="px-4 py-2 rounded-md text-sm font-medium transition-all">Bulk</button>
                 </div>
-
-                <div v-if="addMode === 'single'" class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Alias</label>
-                        <input v-model="form.alias" placeholder="e.g. main, backup"
-                            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">User ID</label>
-                        <input v-model="form.userId" placeholder="userId"
-                            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm">
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Service Token</label>
-                        <input v-model="form.serviceToken" placeholder="serviceToken value"
-                            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-mono">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">PH Token</label>
-                        <input v-model="form.ph" placeholder="xiaomichatbot_ph"
-                            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-mono">
-                    </div>
-                    <div class="flex items-end">
-                        <button @click="addSingle"
-                            class="px-6 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600 transition-colors">
-                            Add Cookie
-                        </button>
-                    </div>
+                <div v-if="mode==='s'" class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Alias</label><input v-model="f.alias" placeholder="e.g. main" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1.5">User ID</label><input v-model="f.userId" placeholder="userId" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm"></div>
+                    <div class="col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1.5">Service Token</label><input v-model="f.serviceToken" placeholder="serviceToken" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-mono"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1.5">PH Token</label><input v-model="f.ph" placeholder="xiaomichatbot_ph" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-mono"></div>
+                    <div class="flex items-end"><button @click="addS" class="px-6 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600">Add Cookie</button></div>
                 </div>
-
-                <div v-if="addMode === 'bulk'">
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Paste Cookie Strings</label>
-                    <textarea v-model="bulkCookies" rows="4" placeholder="serviceToken=xxx; userId=xxx; xiaomichatbot_ph=xxx"
-                        class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-mono"></textarea>
-                    <button @click="addBulk"
-                        class="mt-3 px-6 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600 transition-colors">
-                        Parse & Add
-                    </button>
+                <div v-if="mode==='b'">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Paste Cookie Strings (one per line)</label>
+                    <textarea v-model="bulk" rows="4" placeholder="serviceToken=xxx; userId=xxx; xiaomichatbot_ph=xxx" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-mono"></textarea>
+                    <button @click="addB" class="mt-3 px-6 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600">Parse & Add</button>
                 </div>
             </div>
-
-            <!-- Cookie Table -->
             <div class="bg-white rounded-lg border border-gray-100 overflow-hidden">
                 <table class="w-full">
-                    <thead>
-                        <tr class="bg-gray-50 border-b border-gray-100">
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Alias</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User ID</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Requests</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tokens</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Used</th>
-                            <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
+                    <thead><tr class="bg-gray-50 border-b border-gray-100">
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Alias</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">User ID</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Requests</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tokens</th>
+                        <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    </tr></thead>
                     <tbody class="divide-y divide-gray-50 table-hover">
-                        <tr v-for="c in cookies" :key="c.id" class="transition-colors">
-                            <td class="px-5 py-3.5">
-                                <span class="font-medium text-gray-900 text-sm">{{ c.alias }}</span>
-                            </td>
+                        <tr v-for="c in list" :key="c.id">
+                            <td class="px-5 py-3.5"><span class="font-medium text-gray-900 text-sm">{{ c.alias }}</span></td>
                             <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">{{ c.user_id }}</td>
-                            <td class="px-5 py-3.5">
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                                    :class="{
-                                        'bg-green-50 text-green-700': c.status === 'valid',
-                                        'bg-red-50 text-red-700': c.status === 'expired',
-                                        'bg-gray-100 text-gray-500': c.status === 'unknown'
-                                    }">
-                                    <span class="w-1.5 h-1.5 rounded-full"
-                                        :class="{
-                                            'bg-green-500': c.status === 'valid',
-                                            'bg-red-500': c.status === 'expired',
-                                            'bg-gray-400': c.status === 'unknown'
-                                        }"></span>
-                                    {{ c.status }}
-                                </span>
-                            </td>
+                            <td class="px-5 py-3.5"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" :class="c.status==='valid'?'bg-green-50 text-green-700':c.status==='expired'?'bg-red-50 text-red-700':'bg-gray-100 text-gray-500'"><span class="w-1.5 h-1.5 rounded-full" :class="c.status==='valid'?'bg-green-500':c.status==='expired'?'bg-red-500':'bg-gray-400'"></span>{{ c.status }}</span></td>
                             <td class="px-5 py-3.5 text-sm text-gray-700">{{ c.total_requests }}</td>
-                            <td class="px-5 py-3.5 text-sm text-gray-700">{{ formatNumber(c.total_tokens) }}</td>
-                            <td class="px-5 py-3.5 text-sm text-gray-500">{{ c.last_used ? formatTime(c.last_used) : 'Never' }}</td>
-                            <td class="px-5 py-3.5 text-right">
-                                <div class="flex items-center justify-end gap-1">
-                                    <button @click="checkOne(c.id)" title="Health Check"
-                                        class="p-2 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-brand-50 transition-colors">
-                                        <span v-html="icons.refresh"></span>
-                                    </button>
-                                    <button @click="deleteOne(c.id)" title="Delete"
-                                        class="p-2 rounded-lg text-gray-400 hover:text-danger hover:bg-red-50 transition-colors">
-                                        <span v-html="icons.trash"></span>
-                                    </button>
-                                </div>
-                            </td>
+                            <td class="px-5 py-3.5 text-sm text-gray-700">{{ (c.total_tokens||0).toLocaleString() }}</td>
+                            <td class="px-5 py-3.5 text-right"><div class="flex items-center justify-end gap-1">
+                                <button @click="chk(c.id)" class="p-2 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-brand-50"><span v-html="I.ref"></span></button>
+                                <button @click="del(c.id)" class="p-2 rounded-lg text-gray-400 hover:text-danger hover:bg-red-50"><span v-html="I.trash"></span></button>
+                            </div></td>
                         </tr>
-                        <tr v-if="cookies.length === 0">
-                            <td colspan="7" class="px-5 py-12 text-center text-gray-400">
-                                No cookies added yet. Click "Add Cookie" to get started.
-                            </td>
-                        </tr>
+                        <tr v-if="!list.length"><td colspan="6" class="px-5 py-12 text-center text-gray-400">No cookies added yet.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>`,
         setup() {
-            const cookies = ref([]);
-            const showAdd = ref(false);
-            const addMode = ref('single');
-            const form = ref({ alias: '', serviceToken: '', userId: '', ph: '' });
-            const bulkCookies = ref('');
-
-            const load = async () => { cookies.value = await api.get('/api/cookies'); };
+            const list = ref([]); const show = ref(false); const mode = ref('s');
+            const f = ref({ alias: '', serviceToken: '', userId: '', ph: '' }); const bulk = ref('');
+            const load = async () => { list.value = await api.get('/api/cookies'); };
             onMounted(load);
-
-            const formatNumber = (n) => n ? n.toLocaleString() : '0';
-            const formatTime = (t) => {
-                if (!t) return '';
-                const d = new Date(t);
-                const now = new Date();
-                const diff = now - d;
-                if (diff < 60000) return 'Just now';
-                if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
-                if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
-                return d.toLocaleDateString();
-            };
-
-            const addSingle = async () => {
-                await api.post('/api/cookies', form.value);
-                form.value = { alias: '', serviceToken: '', userId: '', ph: '' };
-                showAdd.value = false;
-                await load();
-            };
-            const addBulk = async () => {
-                await api.post('/api/cookies/bulk', { cookies: bulkCookies.value });
-                bulkCookies.value = '';
-                showAdd.value = false;
-                await load();
-            };
-            const deleteOne = async (id) => { await api.del('/api/cookies?id=' + id); await load(); };
-            const checkOne = async (id) => { await api.post('/api/cookies/health?id=' + id, {}); setTimeout(load, 2000); };
+            const addS = async () => { await api.post('/api/cookies', f.value); f.value = { alias: '', serviceToken: '', userId: '', ph: '' }; show.value = false; await load(); };
+            const addB = async () => { await api.post('/api/cookies/bulk', { cookies: bulk.value }); bulk.value = ''; show.value = false; await load(); };
+            const del = async (id) => { await api.del('/api/cookies?id=' + id); await load(); };
+            const chk = async (id) => { await api.post('/api/cookies/health?id=' + id, {}); setTimeout(load, 2000); };
             const checkAll = async () => { await api.post('/api/cookies/health-all', {}); setTimeout(load, 3000); };
-
-            return { cookies, showAdd, addMode, form, bulkCookies, icons, formatNumber, formatTime, addSingle, addBulk, deleteOne, checkOne, checkAll };
+            return { list, show, mode, f, bulk, I, addS, addB, del, chk, checkAll };
         }
     };
 
-    // Config
+    const APIKeys = {
+        template: `
+        <div>
+            <div class="flex items-center justify-between mb-6">
+                <div><h1 class="text-2xl font-bold text-gray-900">API Keys</h1><p class="text-gray-500 text-sm mt-1">Manage keys for /v1/chat/completions authentication</p></div>
+                <button @click="showAdd=!showAdd" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-brand-500 text-white rounded-lg hover:bg-brand-600"><span v-html="I.plus"></span> Create Key</button>
+            </div>
+            <div v-if="showAdd" class="bg-white rounded-lg border border-gray-100 p-6 mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Key Name</label>
+                <div class="flex gap-3">
+                    <input v-model="name" placeholder="e.g. production, testing" class="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm">
+                    <button @click="add" class="px-6 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600">Create</button>
+                </div>
+            </div>
+            <div v-if="newKey" class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-medium text-green-800 mb-1">API Key Created</div>
+                        <div class="font-mono text-sm text-green-700 bg-green-100 px-3 py-2 rounded">{{ newKey }}</div>
+                    </div>
+                    <button @click="copy(newKey)" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">{{ copied ? 'Copied!' : 'Copy' }}</button>
+                </div>
+                <p class="text-xs text-green-600 mt-2">Save this key now. It won't be shown again.</p>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-100 overflow-hidden">
+                <table class="w-full">
+                    <thead><tr class="bg-gray-50 border-b border-gray-100">
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Key</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Requests</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Last Used</th>
+                        <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-50 table-hover">
+                        <tr v-for="k in keys" :key="k.id">
+                            <td class="px-5 py-3.5"><span class="font-medium text-gray-900 text-sm">{{ k.name }}</span></td>
+                            <td class="px-5 py-3.5"><span class="font-mono text-sm text-gray-500">{{ k.key.substring(0, 12) }}...</span></td>
+                            <td class="px-5 py-3.5">
+                                <button @click="toggle(k)" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors" :class="k.enabled ? 'bg-brand-500' : 'bg-gray-200'">
+                                    <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform" :class="k.enabled ? 'translate-x-4' : 'translate-x-0.5'"></span>
+                                </button>
+                            </td>
+                            <td class="px-5 py-3.5 text-sm text-gray-700">{{ k.req_count }}</td>
+                            <td class="px-5 py-3.5 text-sm text-gray-500">{{ k.last_used ? timeAgo(k.last_used) : 'Never' }}</td>
+                            <td class="px-5 py-3.5 text-right">
+                                <button @click="del(k.id)" class="p-2 rounded-lg text-gray-400 hover:text-danger hover:bg-red-50"><span v-html="I.trash"></span></button>
+                            </td>
+                        </tr>
+                        <tr v-if="!keys.length"><td colspan="6" class="px-5 py-12 text-center text-gray-400">No API keys. Create one to start using the API.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>`,
+        setup() {
+            const keys = ref([]); const showAdd = ref(false); const name = ref('');
+            const newKey = ref(''); const copied = ref(false);
+            const load = async () => { keys.value = await api.get('/api/keys'); };
+            onMounted(load);
+            const add = async () => {
+                const r = await api.post('/api/keys', { name: name.value });
+                if (r.key) { newKey.value = r.key; name.value = ''; showAdd.value = false; await load(); }
+            };
+            const del = async (id) => { await api.del('/api/keys?id=' + id); await load(); };
+            const toggle = async (k) => { await api.post('/api/keys/toggle?id=' + k.id + '&enabled=' + !k.enabled, {}); await load(); };
+            const copy = (v) => { navigator.clipboard.writeText(v); copied.value = true; setTimeout(() => copied.value = false, 2000); };
+            const timeAgo = (t) => { const d = new Date(t), now = new Date(), diff = now - d; if (diff < 60000) return 'Just now'; if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago'; if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago'; return d.toLocaleDateString(); };
+            return { keys, showAdd, name, newKey, copied, I, add, del, toggle, copy, timeAgo };
+        }
+    };
+
     const Config = {
         template: `
         <div>
-            <div class="mb-6">
-                <h1 class="text-2xl font-bold text-gray-900">Configuration</h1>
-                <p class="text-gray-500 text-sm mt-1">Default model and proxy settings</p>
-            </div>
-
-            <div class="bg-white rounded-lg border border-gray-100 p-6 max-w-2xl">
-                <div class="space-y-5">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Default Model</label>
-                        <select v-model="config.default_model"
-                            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white">
-                            <option value="mimo-v2.5-pro">mimo-v2.5-pro (Recommended)</option>
-                            <option value="mimo-v2.5">mimo-v2.5</option>
-                            <option value="mimo-v2-flash">mimo-v2-flash (Fast)</option>
-                            <option value="mimo-v2-pro">mimo-v2-pro</option>
-                            <option value="mimo-v2-omni">mimo-v2-omni</option>
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Temperature</label>
-                            <input v-model="config.temperature" type="number" step="0.1" min="0" max="2"
-                                class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm">
-                            <p class="text-xs text-gray-400 mt-1">0.0 - 2.0</p>
+            <div class="mb-6"><h1 class="text-2xl font-bold text-gray-900">Configuration</h1><p class="text-gray-500 text-sm mt-1">Default model and proxy settings</p></div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-lg border border-gray-100 p-6">
+                    <h3 class="font-semibold text-gray-900 mb-4">Model Settings</h3>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Default Model</label>
+                            <select v-model="c.default_model" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white">
+                                <option value="mimo-v2.5-pro">mimo-v2.5-pro (Recommended)</option>
+                                <option value="mimo-v2.5">mimo-v2.5</option>
+                                <option value="mimo-v2-flash">mimo-v2-flash (Fast)</option>
+                                <option value="mimo-v2-pro">mimo-v2-pro</option>
+                                <option value="mimo-v2-omni">mimo-v2-omni</option>
+                            </select>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Top-P</label>
-                            <input v-model="config.top_p" type="number" step="0.05" min="0" max="1"
-                                class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm">
-                            <p class="text-xs text-gray-400 mt-1">0.0 - 1.0</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Temperature</label><input v-model="c.temperature" type="number" step="0.1" min="0" max="2" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Top-P</label><input v-model="c.top_p" type="number" step="0.05" min="0" max="1" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm"></div>
                         </div>
-                    </div>
-
-                    <div class="flex items-center justify-between py-3 border-t border-gray-100">
-                        <div>
-                            <div class="text-sm font-medium text-gray-700">Enable Thinking</div>
-                            <div class="text-xs text-gray-400 mt-0.5">Allow model to show reasoning process</div>
+                        <div class="flex items-center justify-between py-3 border-t border-gray-100">
+                            <div><div class="text-sm font-medium text-gray-700">Enable Thinking</div><div class="text-xs text-gray-400">Show reasoning process</div></div>
+                            <button @click="c.enable_thinking = c.enable_thinking==='true'?'false':'true'" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors" :class="c.enable_thinking==='true'?'bg-brand-500':'bg-gray-200'">
+                                <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform" :class="c.enable_thinking==='true'?'translate-x-6':'translate-x-1'"></span>
+                            </button>
                         </div>
-                        <button @click="toggleThinking"
-                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                            :class="config.enable_thinking === 'true' ? 'bg-brand-500' : 'bg-gray-200'">
-                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-                                :class="config.enable_thinking === 'true' ? 'translate-x-6' : 'translate-x-1'"></span>
-                        </button>
+                        <button @click="save" class="px-6 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600">Save Changes</button>
+                        <span v-if="saved" class="text-success text-sm font-medium ml-2"><span v-html="I.chk"></span> Saved</span>
                     </div>
-
-                    <div class="pt-2 flex items-center gap-3">
-                        <button @click="save"
-                            class="px-6 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600 transition-colors">
-                            Save Changes
-                        </button>
-                        <transition name="fade">
-                            <span v-if="saved" class="text-success text-sm font-medium flex items-center gap-1">
-                                <span v-html="icons.check"></span> Saved
-                            </span>
-                        </transition>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-100 p-6">
+                    <h3 class="font-semibold text-gray-900 mb-4">Security</h3>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label><input v-model="pw.old" type="password" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1.5">New Password</label><input v-model="pw.new" type="password" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm"></div>
+                        <button @click="changePw" class="px-6 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600">Change Password</button>
+                        <span v-if="pwMsg" class="text-sm ml-2" :class="pwErr?'text-danger':'text-success'">{{ pwMsg }}</span>
                     </div>
                 </div>
             </div>
         </div>`,
         setup() {
-            const config = ref({});
-            const saved = ref(false);
-
-            onMounted(async () => { config.value = await api.get('/api/config'); });
-
-            const toggleThinking = () => {
-                config.value.enable_thinking = config.value.enable_thinking === 'true' ? 'false' : 'true';
+            const c = ref({}); const saved = ref(false);
+            const pw = ref({ old: '', new: '' }); const pwMsg = ref(''); const pwErr = ref(false);
+            onMounted(async () => { c.value = await api.get('/api/config'); });
+            const save = async () => { await api.put('/api/config', c.value); saved.value = true; setTimeout(() => saved.value = false, 2000); };
+            const changePw = async () => {
+                try {
+                    const r = await api.post('/api/password', { old_password: pw.value.old, new_password: pw.value.new });
+                    if (r.error) { pwMsg.value = r.error; pwErr.value = true; }
+                    else { pwMsg.value = 'Password changed!'; pwErr.value = false; pw.value = { old: '', new: '' }; }
+                } catch { pwMsg.value = 'Failed to change password'; pwErr.value = true; }
+                setTimeout(() => pwMsg.value = '', 3000);
             };
-
-            const save = async () => {
-                await api.put('/api/config', config.value);
-                saved.value = true;
-                setTimeout(() => { saved.value = false; }, 2000);
-            };
-
-            return { config, saved, icons, toggleThinking, save };
+            return { c, saved, pw, pwMsg, pwErr, I, save, changePw };
         }
     };
 
-    // Logs
     const Logs = {
         template: `
         <div>
             <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Request Logs</h1>
-                    <p class="text-gray-500 text-sm mt-1">Recent API requests</p>
-                </div>
-                <button @click="load"
-                    class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <span v-html="icons.refresh"></span> Refresh
-                </button>
+                <div><h1 class="text-2xl font-bold text-gray-900">Request Logs</h1><p class="text-gray-500 text-sm mt-1">Recent API requests</p></div>
+                <button @click="load" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50"><span v-html="I.ref"></span> Refresh</button>
             </div>
-
             <div class="bg-white rounded-lg border border-gray-100 overflow-hidden">
                 <table class="w-full">
-                    <thead>
-                        <tr class="bg-gray-50 border-b border-gray-100">
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Time</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cookie</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Model</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tokens</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Duration</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                        </tr>
-                    </thead>
+                    <thead><tr class="bg-gray-50 border-b border-gray-100">
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Time</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">API Key</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Cookie</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Model</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tokens</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Duration</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                    </tr></thead>
                     <tbody class="divide-y divide-gray-50 table-hover">
-                        <tr v-for="l in logs" :key="l.id" class="transition-colors">
-                            <td class="px-5 py-3.5 text-sm text-gray-500">{{ formatTime(l.created_at) }}</td>
-                            <td class="px-5 py-3.5">
-                                <span class="text-sm font-medium text-gray-700">{{ l.cookie_alias || '-' }}</span>
-                            </td>
-                            <td class="px-5 py-3.5">
-                                <span class="text-sm font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">{{ l.model }}</span>
-                            </td>
+                        <tr v-for="l in logs" :key="l.id">
+                            <td class="px-5 py-3.5 text-sm text-gray-500">{{ fmt(l.created_at) }}</td>
+                            <td class="px-5 py-3.5"><span class="text-sm text-gray-700">{{ l.api_key_name || '-' }}</span></td>
+                            <td class="px-5 py-3.5"><span class="text-sm font-medium text-gray-700">{{ l.cookie_alias || '-' }}</span></td>
+                            <td class="px-5 py-3.5"><span class="text-sm font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">{{ l.model }}</span></td>
                             <td class="px-5 py-3.5 text-sm text-gray-700">{{ l.prompt_tokens + l.completion_tokens }}</td>
                             <td class="px-5 py-3.5 text-sm text-gray-500">{{ l.duration_ms }}ms</td>
-                            <td class="px-5 py-3.5">
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                                    :class="l.status_code === 200 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
-                                    <span class="w-1.5 h-1.5 rounded-full"
-                                        :class="l.status_code === 200 ? 'bg-green-500' : 'bg-red-500'"></span>
-                                    {{ l.status_code === 200 ? 'OK' : l.status_code }}
-                                </span>
-                            </td>
+                            <td class="px-5 py-3.5"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" :class="l.status_code===200?'bg-green-50 text-green-700':'bg-red-50 text-red-700'"><span class="w-1.5 h-1.5 rounded-full" :class="l.status_code===200?'bg-green-500':'bg-red-500'"></span>{{ l.status_code===200?'OK':l.status_code }}</span></td>
                         </tr>
-                        <tr v-if="logs.length === 0">
-                            <td colspan="6" class="px-5 py-12 text-center text-gray-400">
-                                No requests logged yet.
-                            </td>
-                        </tr>
+                        <tr v-if="!logs.length"><td colspan="7" class="px-5 py-12 text-center text-gray-400">No requests logged yet.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -601,47 +407,28 @@
             const logs = ref([]);
             const load = async () => { logs.value = await api.get('/api/logs?limit=100'); };
             onMounted(load);
-
-            const formatTime = (t) => {
-                if (!t) return '';
-                const d = new Date(t);
-                return d.toLocaleTimeString();
-            };
-
-            return { logs, icons, load, formatTime };
+            const fmt = (t) => t ? new Date(t).toLocaleTimeString() : '';
+            return { logs, I, load, fmt };
         }
     };
 
-    // Router
     const router = createRouter({
         history: createWebHashHistory(),
         routes: [
             { path: '/', component: Login },
-            {
-                path: '/',
-                component: Layout,
-                children: [
-                    { path: 'dashboard', component: Dashboard },
-                    { path: 'cookies', component: Cookies },
-                    { path: 'config', component: Config },
-                    { path: 'logs', component: Logs },
-                ]
-            }
+            { path: '/', component: Layout, children: [
+                { path: 'dashboard', component: Dashboard },
+                { path: 'cookies', component: Cookies },
+                { path: 'keys', component: APIKeys },
+                { path: 'config', component: Config },
+                { path: 'logs', component: Logs },
+            ]}
         ]
     });
-
     router.beforeEach(async (to, from, next) => {
-        if (to.path === '/') {
-            try {
-                const res = await api.get('/api/auth/status');
-                if (res.authenticated) next('/dashboard');
-                else next();
-            } catch { next(); }
-            return;
-        }
+        if (to.path === '/') { try { const r = await api.get('/api/auth/status'); if (r.authenticated) next('/dashboard'); else next(); } catch { next(); } return; }
         next();
     });
-
     createApp({ template: '<router-view />' }).use(router).mount('#app');
     </script>
 </body>

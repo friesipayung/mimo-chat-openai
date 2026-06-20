@@ -33,6 +33,7 @@ type RequestLog struct {
 	ID               int64      `json:"id"`
 	CookieID         *int64     `json:"cookie_id"`
 	CookieAlias      string     `json:"cookie_alias"`
+	APIKeyName       string     `json:"api_key_name"`
 	Model            string     `json:"model"`
 	PromptTokens     int        `json:"prompt_tokens"`
 	CompletionTokens int        `json:"completion_tokens"`
@@ -51,6 +52,16 @@ type Stats struct {
 	TotalTokens   int64   `json:"total_tokens"`
 	TodayTokens   int64   `json:"today_tokens"`
 	SuccessRate   float64 `json:"success_rate"`
+}
+
+type APIKey struct {
+	ID        int64      `json:"id"`
+	Name      string     `json:"name"`
+	Key       string     `json:"key"`
+	Enabled   bool       `json:"enabled"`
+	LastUsed  *time.Time `json:"last_used"`
+	ReqCount  int64      `json:"req_count"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 func Open(dbPath string) (*DB, error) {
@@ -103,6 +114,7 @@ func (db *DB) migrate() error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			cookie_id INTEGER,
 			cookie_alias TEXT DEFAULT '',
+			api_key_name TEXT DEFAULT '',
 			model TEXT DEFAULT '',
 			prompt_tokens INTEGER DEFAULT 0,
 			completion_tokens INTEGER DEFAULT 0,
@@ -111,6 +123,15 @@ func (db *DB) migrate() error {
 			duration_ms INTEGER DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (cookie_id) REFERENCES cookies(id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS api_keys (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			key TEXT NOT NULL UNIQUE,
+			enabled INTEGER DEFAULT 1,
+			last_used DATETIME,
+			req_count INTEGER DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 	}
 
@@ -201,16 +222,16 @@ func (db *DB) UpdateCookieUsage(id int64, tokens int) error {
 
 func (db *DB) AddLog(log *RequestLog) error {
 	_, err := db.conn.Exec(
-		`INSERT INTO request_logs (cookie_id, cookie_alias, model, prompt_tokens, completion_tokens, status_code, error, duration_ms)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		log.CookieID, log.CookieAlias, log.Model, log.PromptTokens, log.CompletionTokens, log.StatusCode, log.Error, log.DurationMs,
+		`INSERT INTO request_logs (cookie_id, cookie_alias, api_key_name, model, prompt_tokens, completion_tokens, status_code, error, duration_ms)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		log.CookieID, log.CookieAlias, log.APIKeyName, log.Model, log.PromptTokens, log.CompletionTokens, log.StatusCode, log.Error, log.DurationMs,
 	)
 	return err
 }
 
 func (db *DB) GetLogs(limit int) ([]RequestLog, error) {
 	rows, err := db.conn.Query(
-		`SELECT id, cookie_id, cookie_alias, model, prompt_tokens, completion_tokens, status_code, error, duration_ms, created_at
+		`SELECT id, cookie_id, cookie_alias, api_key_name, model, prompt_tokens, completion_tokens, status_code, error, duration_ms, created_at
 		 FROM request_logs ORDER BY id DESC LIMIT ?`, limit,
 	)
 	if err != nil {
@@ -221,7 +242,7 @@ func (db *DB) GetLogs(limit int) ([]RequestLog, error) {
 	var logs []RequestLog
 	for rows.Next() {
 		var l RequestLog
-		if err := rows.Scan(&l.ID, &l.CookieID, &l.CookieAlias, &l.Model, &l.PromptTokens, &l.CompletionTokens, &l.StatusCode, &l.Error, &l.DurationMs, &l.CreatedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.CookieID, &l.CookieAlias, &l.APIKeyName, &l.Model, &l.PromptTokens, &l.CompletionTokens, &l.StatusCode, &l.Error, &l.DurationMs, &l.CreatedAt); err != nil {
 			return nil, err
 		}
 		logs = append(logs, l)
@@ -286,4 +307,90 @@ func (db *DB) GetAllConfig() (map[string]string, error) {
 		config[k] = v
 	}
 	return config, nil
+}
+
+// API Key management
+
+func (db *DB) AddAPIKey(name, key string) (int64, error) {
+	result, err := db.conn.Exec(
+		`INSERT INTO api_keys (name, key) VALUES (?, ?)`,
+		name, key,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
+}
+
+func (db *DB) DeleteAPIKey(id int64) error {
+	_, err := db.conn.Exec("DELETE FROM api_keys WHERE id = ?", id)
+	return err
+}
+
+func (db *DB) GetAPIKeyByKey(key string) (*APIKey, error) {
+	var k APIKey
+	var enabled int
+	err := db.conn.QueryRow(
+		`SELECT id, name, key, enabled, last_used, req_count, created_at
+		 FROM api_keys WHERE key = ? AND enabled = 1`, key,
+	).Scan(&k.ID, &k.Name, &k.Key, &enabled, &k.LastUsed, &k.ReqCount, &k.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	k.Enabled = enabled == 1
+	return &k, nil
+}
+
+func (db *DB) ListAPIKeys() ([]APIKey, error) {
+	rows, err := db.conn.Query(
+		`SELECT id, name, key, enabled, last_used, req_count, created_at
+		 FROM api_keys ORDER BY id`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var keys []APIKey
+	for rows.Next() {
+		var k APIKey
+		var enabled int
+		if err := rows.Scan(&k.ID, &k.Name, &k.Key, &enabled, &k.LastUsed, &k.ReqCount, &k.CreatedAt); err != nil {
+			return nil, err
+		}
+		k.Enabled = enabled == 1
+		keys = append(keys, k)
+	}
+	return keys, nil
+}
+
+func (db *DB) ToggleAPIKey(id int64, enabled bool) error {
+	_, err := db.conn.Exec("UPDATE api_keys SET enabled = ? WHERE id = ?", enabled, id)
+	return err
+}
+
+func (db *DB) UpdateAPIKeyUsage(key string) error {
+	now := time.Now()
+	_, err := db.conn.Exec(
+		"UPDATE api_keys SET req_count = req_count + 1, last_used = ? WHERE key = ?",
+		now, key,
+	)
+	return err
+}
+
+// Password management
+
+func (db *DB) GetPassword() (string, error) {
+	val, err := db.GetConfig("admin_password")
+	if err != nil {
+		return "", err
+	}
+	if val == "" {
+		return "12345678", nil
+	}
+	return val, nil
+}
+
+func (db *DB) SetPassword(password string) error {
+	return db.SetConfig("admin_password", password)
 }

@@ -28,8 +28,38 @@ func (h *Handler) HandleModels(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(types.ModelList{Object: "list", Data: types.SupportedModels})
 }
 
+// RequireAPIKey middleware - validates API key from Authorization header
+func (h *Handler) RequireAPIKey(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Extract API key from Authorization: Bearer <key>
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			writeError(w, http.StatusUnauthorized, "missing Authorization header. Use: Authorization: Bearer <api_key>")
+			return
+		}
+
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			writeError(w, http.StatusUnauthorized, "invalid Authorization format. Use: Authorization: Bearer <api_key>")
+			return
+		}
+
+		apiKey := parts[1]
+		key, err := h.db.GetAPIKeyByKey(apiKey)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "invalid API key")
+			return
+		}
+
+		// Store key name in context for logging
+		r.Header.Set("X-API-Key-Name", key.Name)
+		next(w, r)
+	}
+}
+
 func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	apiKeyName := r.Header.Get("X-API-Key-Name")
 
 	var req types.ChatCompletionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -72,26 +102,26 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.client.Chat(cookie.FullCookie, mimoReq)
 	if err != nil {
-		h.logRequest(cookie, req.Model, 0, 0, 0, err.Error(), start)
+		h.logRequest(cookie, apiKeyName, req.Model, 0, 0, 0, err.Error(), start)
 		writeError(w, http.StatusBadGateway, "upstream error: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		h.logRequest(cookie, req.Model, 0, 0, resp.StatusCode, "upstream status error", start)
+		h.logRequest(cookie, apiKeyName, req.Model, 0, 0, resp.StatusCode, "upstream status error", start)
 		writeError(w, http.StatusBadGateway, "upstream returned status "+resp.Status)
 		return
 	}
 
 	if req.Stream {
-		h.handleStream(w, resp, req.Model, cookie, start)
+		h.handleStream(w, resp, req.Model, cookie, apiKeyName, start)
 	} else {
-		h.handleSync(w, resp, req.Model, cookie, start)
+		h.handleSync(w, resp, req.Model, cookie, apiKeyName, start)
 	}
 }
 
-func (h *Handler) handleStream(w http.ResponseWriter, resp *http.Response, model string, cookie *db.Cookie, start time.Time) {
+func (h *Handler) handleStream(w http.ResponseWriter, resp *http.Response, model string, cookie *db.Cookie, apiKeyName string, start time.Time) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		writeError(w, http.StatusInternalServerError, "streaming not supported")
@@ -106,30 +136,30 @@ func (h *Handler) handleStream(w http.ResponseWriter, resp *http.Response, model
 	mimo.StreamToOpenAI(resp.Body, model, w, func() { flusher.Flush() })
 
 	h.db.UpdateCookieUsage(cookie.ID, 0)
-	h.logRequest(cookie, model, 0, 0, 200, "", start)
+	h.logRequest(cookie, apiKeyName, model, 0, 0, 200, "", start)
 }
 
-func (h *Handler) handleSync(w http.ResponseWriter, resp *http.Response, model string, cookie *db.Cookie, start time.Time) {
+func (h *Handler) handleSync(w http.ResponseWriter, resp *http.Response, model string, cookie *db.Cookie, apiKeyName string, start time.Time) {
 	result, err := mimo.CollectSync(resp.Body, model)
 	if err != nil {
-		h.logRequest(cookie, model, 0, 0, 502, err.Error(), start)
+		h.logRequest(cookie, apiKeyName, model, 0, 0, 502, err.Error(), start)
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 
 	if result.Usage != nil {
 		h.db.UpdateCookieUsage(cookie.ID, result.Usage.TotalTokens)
-		h.logRequest(cookie, model, result.Usage.PromptTokens, result.Usage.CompletionTokens, 200, "", start)
+		h.logRequest(cookie, apiKeyName, model, result.Usage.PromptTokens, result.Usage.CompletionTokens, 200, "", start)
 	} else {
 		h.db.UpdateCookieUsage(cookie.ID, 0)
-		h.logRequest(cookie, model, 0, 0, 200, "", start)
+		h.logRequest(cookie, apiKeyName, model, 0, 0, 200, "", start)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
 }
 
-func (h *Handler) logRequest(cookie *db.Cookie, model string, promptTokens, completionTokens, statusCode int, errMsg string, start time.Time) {
+func (h *Handler) logRequest(cookie *db.Cookie, apiKeyName, model string, promptTokens, completionTokens, statusCode int, errMsg string, start time.Time) {
 	alias := ""
 	if cookie != nil {
 		alias = cookie.Alias
@@ -141,6 +171,7 @@ func (h *Handler) logRequest(cookie *db.Cookie, model string, promptTokens, comp
 	h.db.AddLog(&db.RequestLog{
 		CookieID:         cookieID,
 		CookieAlias:      alias,
+		APIKeyName:       apiKeyName,
 		Model:            model,
 		PromptTokens:     promptTokens,
 		CompletionTokens: completionTokens,
