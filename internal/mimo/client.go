@@ -69,11 +69,11 @@ func ParseCookieParts(cookie string) (serviceToken, userId, ph string) {
 	for _, part := range strings.Split(cookie, ";") {
 		part = strings.TrimSpace(part)
 		if strings.HasPrefix(part, "serviceToken=") {
-			serviceToken = strings.TrimPrefix(part, "serviceToken=")
+			serviceToken = strings.Trim(strings.TrimPrefix(part, "serviceToken="), "\"")
 		} else if strings.HasPrefix(part, "userId=") {
-			userId = strings.TrimPrefix(part, "userId=")
+			userId = strings.Trim(strings.TrimPrefix(part, "userId="), "\"")
 		} else if strings.HasPrefix(part, "xiaomichatbot_ph=") {
-			ph = strings.TrimPrefix(part, "xiaomichatbot_ph=")
+			ph = strings.Trim(strings.TrimPrefix(part, "xiaomichatbot_ph="), "\"")
 		}
 	}
 	return
