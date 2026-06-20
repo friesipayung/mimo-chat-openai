@@ -163,6 +163,7 @@ func CollectSync(reader io.Reader, model string) (*types.ChatCompletionResponse,
 	chatID := "chatcmpl-" + RandHex(16)
 	created := time.Now().Unix()
 	var content strings.Builder
+	var reasoning strings.Builder
 	var inThink bool
 	var usage *types.MiMoUsage
 
@@ -228,9 +229,11 @@ func CollectSync(reader io.Reader, model string) (*types.ChatCompletionResponse,
 				}
 			} else {
 				if i := strings.Index(chunk, "</think>"); i >= 0 {
+					reasoning.WriteString(chunk[:i])
 					chunk = chunk[i+9:]
 					inThink = false
 				} else {
+					reasoning.WriteString(chunk)
 					break
 				}
 			}
@@ -238,14 +241,20 @@ func CollectSync(reader io.Reader, model string) (*types.ChatCompletionResponse,
 	}
 
 	fr := "stop"
+	msg := &types.ChatMessage{Role: "assistant", Content: content.String()}
+	reasoningContent := reasoning.String()
+	if reasoningContent != "" {
+		msg.ReasoningContent = &reasoningContent
+	}
+
 	resp := &types.ChatCompletionResponse{
 		ID:      chatID,
 		Object:  "chat.completion",
 		Created: created,
 		Model:   model,
 		Choices: []types.ChatChoice{{
-			Index:   0,
-			Message: &types.ChatMessage{Role: "assistant", Content: content.String()},
+			Index:        0,
+			Message:      msg,
 			FinishReason: &fr,
 		}},
 	}

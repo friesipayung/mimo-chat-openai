@@ -85,13 +85,20 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		topP = *req.TopP
 	}
 
+	// Determine thinking mode
+	// Default: enabled for all models except mimo-v2-flash
+	enableThinking := mimoModel != "mimo-v2-flash-studio" && mimoModel != "mimo-v2-omni"
+	if req.Thinking != nil {
+		enableThinking = req.Thinking.Type == "enabled"
+	}
+
 	mimoReq := mimo.MiMoRequest{
 		MsgID:          mimo.RandHex(16),
 		ConversationID: mimo.RandHex(16),
 		Query:          query,
 		IsEditedQuery:  false,
 		ModelConfig: mimo.MiMoModelCfg{
-			EnableThinking:  mimoModel != "mimo-v2-omni",
+			EnableThinking:  enableThinking,
 			WebSearchStatus: "disabled",
 			Model:           mimoModel,
 			Temperature:     temp,

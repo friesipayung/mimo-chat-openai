@@ -2,6 +2,10 @@ package types
 
 import "encoding/json"
 
+type ThinkingConfig struct {
+	Type string `json:"type"` // "enabled" or "disabled"
+}
+
 type ChatCompletionRequest struct {
 	Model       string        `json:"model"`
 	Messages    []ChatMessage `json:"messages"`
@@ -9,11 +13,13 @@ type ChatCompletionRequest struct {
 	Temperature *float64      `json:"temperature,omitempty"`
 	TopP        *float64      `json:"top_p,omitempty"`
 	MaxTokens   *int          `json:"max_tokens,omitempty"`
+	Thinking    *ThinkingConfig `json:"thinking,omitempty"`
 }
 
 type ChatMessage struct {
-	Role    string      `json:"role"`
-	Content interface{} `json:"content"`
+	Role             string  `json:"role"`
+	Content          interface{} `json:"content"`
+	ReasoningContent *string `json:"reasoning_content,omitempty"`
 }
 
 type ChatCompletionResponse struct {
