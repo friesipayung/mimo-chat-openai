@@ -192,3 +192,45 @@ func (h *CookieHandler) HandleCheckAll(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, 200, map[string]string{"status": "checking all"})
 }
+
+func (h *CookieHandler) HandleToggle(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	enabledStr := r.URL.Query().Get("enabled")
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writeJSON(w, 400, map[string]string{"error": "invalid id"})
+		return
+	}
+
+	enabled := enabledStr == "true"
+	if err := h.db.ToggleCookie(id, enabled); err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, 200, map[string]string{"status": "updated"})
+}
+
+func (h *CookieHandler) HandleUpdateAlias(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID    int64  `json:"id"`
+		Alias string `json:"alias"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, 400, map[string]string{"error": "invalid json"})
+		return
+	}
+
+	if req.Alias == "" {
+		writeJSON(w, 400, map[string]string{"error": "alias is required"})
+		return
+	}
+
+	if err := h.db.UpdateCookieAlias(req.ID, req.Alias); err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, 200, map[string]string{"status": "updated"})
+}

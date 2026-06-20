@@ -21,6 +21,7 @@ type Cookie struct {
 	UserID         string     `json:"user_id"`
 	Ph             string     `json:"ph"`
 	FullCookie     string     `json:"full_cookie"`
+	Enabled        bool       `json:"enabled"`
 	Status         string     `json:"status"`
 	LastCheck      *time.Time `json:"last_check"`
 	LastUsed       *time.Time `json:"last_used"`
@@ -98,6 +99,7 @@ func (db *DB) migrate() error {
 			user_id TEXT NOT NULL,
 			ph TEXT NOT NULL,
 			full_cookie TEXT NOT NULL,
+			enabled INTEGER DEFAULT 1,
 			status TEXT DEFAULT 'unknown',
 			last_check DATETIME,
 			last_used DATETIME,
@@ -141,6 +143,9 @@ func (db *DB) migrate() error {
 		}
 	}
 
+	// Add enabled column to existing cookies table if not exists
+	db.conn.Exec("ALTER TABLE cookies ADD COLUMN enabled INTEGER DEFAULT 1")
+
 	return nil
 }
 
@@ -162,31 +167,35 @@ func (db *DB) DeleteCookie(id int64) error {
 
 func (db *DB) GetCookie(id int64) (*Cookie, error) {
 	var c Cookie
+	var enabled int
 	err := db.conn.QueryRow(
-		`SELECT id, alias, service_token, user_id, ph, full_cookie, status, last_check, last_used, total_requests, total_tokens, created_at
+		`SELECT id, alias, service_token, user_id, ph, full_cookie, enabled, status, last_check, last_used, total_requests, total_tokens, created_at
 		 FROM cookies WHERE id = ?`, id,
-	).Scan(&c.ID, &c.Alias, &c.ServiceToken, &c.UserID, &c.Ph, &c.FullCookie, &c.Status, &c.LastCheck, &c.LastUsed, &c.TotalRequests, &c.TotalTokens, &c.CreatedAt)
+	).Scan(&c.ID, &c.Alias, &c.ServiceToken, &c.UserID, &c.Ph, &c.FullCookie, &enabled, &c.Status, &c.LastCheck, &c.LastUsed, &c.TotalRequests, &c.TotalTokens, &c.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
+	c.Enabled = enabled == 1
 	return &c, nil
 }
 
 func (db *DB) GetRandomCookie() (*Cookie, error) {
 	var c Cookie
+	var enabled int
 	err := db.conn.QueryRow(
-		`SELECT id, alias, service_token, user_id, ph, full_cookie, status, total_requests, total_tokens, created_at
-		 FROM cookies WHERE status != 'expired' ORDER BY RANDOM() LIMIT 1`,
-	).Scan(&c.ID, &c.Alias, &c.ServiceToken, &c.UserID, &c.Ph, &c.FullCookie, &c.Status, &c.TotalRequests, &c.TotalTokens, &c.CreatedAt)
+		`SELECT id, alias, service_token, user_id, ph, full_cookie, enabled, status, total_requests, total_tokens, created_at
+		 FROM cookies WHERE enabled = 1 AND status != 'expired' ORDER BY RANDOM() LIMIT 1`,
+	).Scan(&c.ID, &c.Alias, &c.ServiceToken, &c.UserID, &c.Ph, &c.FullCookie, &enabled, &c.Status, &c.TotalRequests, &c.TotalTokens, &c.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
+	c.Enabled = enabled == 1
 	return &c, nil
 }
 
 func (db *DB) ListCookies() ([]Cookie, error) {
 	rows, err := db.conn.Query(
-		`SELECT id, alias, service_token, user_id, ph, full_cookie, status, last_check, last_used, total_requests, total_tokens, created_at
+		`SELECT id, alias, service_token, user_id, ph, full_cookie, enabled, status, last_check, last_used, total_requests, total_tokens, created_at
 		 FROM cookies ORDER BY id`,
 	)
 	if err != nil {
@@ -197,12 +206,24 @@ func (db *DB) ListCookies() ([]Cookie, error) {
 	var cookies []Cookie
 	for rows.Next() {
 		var c Cookie
-		if err := rows.Scan(&c.ID, &c.Alias, &c.ServiceToken, &c.UserID, &c.Ph, &c.FullCookie, &c.Status, &c.LastCheck, &c.LastUsed, &c.TotalRequests, &c.TotalTokens, &c.CreatedAt); err != nil {
+		var enabled int
+		if err := rows.Scan(&c.ID, &c.Alias, &c.ServiceToken, &c.UserID, &c.Ph, &c.FullCookie, &enabled, &c.Status, &c.LastCheck, &c.LastUsed, &c.TotalRequests, &c.TotalTokens, &c.CreatedAt); err != nil {
 			return nil, err
 		}
+		c.Enabled = enabled == 1
 		cookies = append(cookies, c)
 	}
 	return cookies, nil
+}
+
+func (db *DB) ToggleCookie(id int64, enabled bool) error {
+	_, err := db.conn.Exec("UPDATE cookies SET enabled = ? WHERE id = ?", enabled, id)
+	return err
+}
+
+func (db *DB) UpdateCookieAlias(id int64, alias string) error {
+	_, err := db.conn.Exec("UPDATE cookies SET alias = ? WHERE id = ?", alias, id)
+	return err
 }
 
 func (db *DB) UpdateCookieStatus(id int64, status string) error {
