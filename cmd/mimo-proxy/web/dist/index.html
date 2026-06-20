@@ -384,7 +384,8 @@
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">API Key</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Cookie</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Model</th>
-                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tokens</th>
+                        <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Input</th>
+                        <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Output</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Duration</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
                     </tr></thead>
@@ -394,11 +395,12 @@
                             <td class="px-5 py-3.5"><span class="text-sm text-gray-700">{{ l.api_key_name || '-' }}</span></td>
                             <td class="px-5 py-3.5"><span class="text-sm font-medium text-gray-700">{{ l.cookie_alias || '-' }}</span></td>
                             <td class="px-5 py-3.5"><span class="text-sm font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">{{ l.model }}</span></td>
-                            <td class="px-5 py-3.5 text-sm text-gray-700">{{ l.prompt_tokens + l.completion_tokens }}</td>
+                            <td class="px-5 py-3.5 text-sm text-gray-700 text-right font-mono">{{ l.prompt_tokens }}</td>
+                            <td class="px-5 py-3.5 text-sm text-gray-700 text-right font-mono">{{ l.completion_tokens }}</td>
                             <td class="px-5 py-3.5 text-sm text-gray-500">{{ l.duration_ms }}ms</td>
                             <td class="px-5 py-3.5"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" :class="l.status_code===200?'bg-green-50 text-green-700':'bg-red-50 text-red-700'"><span class="w-1.5 h-1.5 rounded-full" :class="l.status_code===200?'bg-green-500':'bg-red-500'"></span>{{ l.status_code===200?'OK':l.status_code }}</span></td>
                         </tr>
-                        <tr v-if="!logs.length"><td colspan="7" class="px-5 py-12 text-center text-gray-400">No requests logged yet.</td></tr>
+                        <tr v-if="!logs.length"><td colspan="8" class="px-5 py-12 text-center text-gray-400">No requests logged yet.</td></tr>
                     </tbody>
                 </table>
             </div>
