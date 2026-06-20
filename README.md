@@ -88,8 +88,16 @@ go build ./cmd/mimo-proxy/
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `LISTEN` | `:8090` | Listen address |
+| `HOSTNAME` | `http://localhost:8090` | Base URL for API (use your domain for self-hosted) |
 | `ADMIN_PASSWORD` | `12345678` | Initial Web UI password (can be changed in UI) |
 | `DB_PATH` | `data/mimo.db` | SQLite database path |
+| `API_TOKEN` | `` | Optional static API token for authentication |
+
+**Example for self-hosted with domain:**
+```bash
+HOSTNAME=https://mimo.yourdomain.com
+LISTEN=:8090
+```
 
 ## How to Get Cookies
 
