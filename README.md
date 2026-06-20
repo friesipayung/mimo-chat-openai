@@ -40,6 +40,7 @@ Wraps the Xiaomi MiMo Studio web chat API into a standard OpenAI Chat Completion
 
 - Dashboard with request stats, token usage, success rate
 - Cookie management (per-key & bulk input)
+- **Balance checking** — View account balance per cookie
 - API key management (create, delete, enable/disable)
 - Cookie health check (auto-detect expired cookies)
 - Request logging with API key and cookie tracking
@@ -92,13 +93,71 @@ go build ./cmd/mimo-proxy/
 
 ## How to Get Cookies
 
+There are two types of cookies needed:
+
+1. **Chat Cookies** — Required for API requests (`/v1/chat/completions`)
+2. **Platform Cookies** — Optional, for balance checking
+
+### Method 1: Get Chat Cookies (Required)
+
 1. Open https://aistudio.xiaomimimo.com/ and login with Xiaomi account
 2. Open DevTools (F12) → Network tab
 3. Send any message in the chat
 4. Find the `/open-apis/bot/chat` request
 5. Copy the full `Cookie` header value
 
-Format: `serviceToken=xxx; userId=xxx; xiaomichatbot_ph=xxx`
+**Cookie format:**
+```
+serviceToken="xxx"; userId=123456; xiaomichatbot_ph="xxx"
+```
+
+**Required fields:**
+- `serviceToken` — Session token from Xiaomi login
+- `userId` — Numeric user ID
+- `xiaomichatbot_ph` — Fingerprint hash
+
+### Method 2: Get Platform Cookies (For Balance)
+
+To check account balance, you need additional platform cookies:
+
+1. Open https://platform.xiaomimimo.com/console/balance and login
+2. Open DevTools (F12) → Network tab
+3. Refresh the page or wait for balance to load
+4. Find the `/api/v1/balance` request
+5. Copy the full `Cookie` header value
+
+**Cookie format (with platform cookies):**
+```
+api-platform_serviceToken="xxx"; api-platform_slh="xxx"; api-platform_ph="xxx"; serviceToken="xxx"; userId=123456; xiaomichatbot_ph="xxx"
+```
+
+**Additional fields for balance:**
+- `api-platform_serviceToken` — Platform session token
+- `api-platform_slh` — Platform security hash
+- `api-platform_ph` — Platform fingerprint
+
+### Method 3: Quick Copy (All Cookies)
+
+To get all cookies at once:
+
+1. Login to both:
+   - https://aistudio.xiaomimimo.com/
+   - https://platform.xiaomimimo.com/
+2. Open DevTools (F12) → Application → Cookies
+3. For domain `xiaomimimo.com`, copy all cookie values
+4. Format as: `key1="value1"; key2="value2"; ...`
+
+### Cookie Examples
+
+**Chat only (no balance):**
+```
+serviceToken="abc123..."; userId=6877411486; xiaomichatbot_ph="xyz789..."
+```
+
+**With balance checking:**
+```
+api-platform_serviceToken="def456..."; api-platform_slh="ghi789..."; api-platform_ph="jkl012..."; serviceToken="abc123..."; userId=6877411486; xiaomichatbot_ph="xyz789..."
+```
 
 ## Usage
 
@@ -244,12 +303,18 @@ After starting, open `http://localhost:8090/ui/`:
 | Page | Description |
 |------|-------------|
 | **Dashboard** | Request stats, token usage, success rate, API usage info |
-| **Cookies** | Add/delete cookies, bulk input, health check |
+| **Cookies** | Add/delete cookies, bulk input, health check, balance check |
 | **API Keys** | Create/delete keys, enable/disable toggle, usage tracking |
 | **Configuration** | Default model, temperature, top-p, thinking mode, password change |
 | **Logs** | Recent request logs with API key and cookie info |
 
 Default password: `12345678` (can be changed in Configuration page)
+
+### Cookie Balance
+
+To check balance, cookies must include platform tokens (see [How to Get Cookies](#method-2-get-platform-cookies-for-balance)).
+
+Click the wallet icon 💳 next to each cookie or "Check Balance" button to fetch balance.
 
 ## Tech Stack
 
