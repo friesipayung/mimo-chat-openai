@@ -234,7 +234,43 @@ Response includes `reasoning_content`:
 }
 ```
 
-### 5. Image Understanding (Multimodal)
+### 5. Web Search
+
+Enable web search to get real-time information from the internet:
+
+```bash
+curl -X POST http://localhost:8090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-xxxx..." \
+  -d '{
+    "model": "mimo-v2.5-pro",
+    "messages": [{"role": "user", "content": "What is the latest news about Xiaomi?"}],
+    "tools": [{"type": "web_search", "web_search": {"enabled": true}}],
+    "stream": false
+  }'
+```
+
+**Web search options:**
+```json
+{
+  "tools": [{
+    "type": "web_search",
+    "web_search": {
+      "enabled": true,
+      "force_search": false,
+      "max_keyword": 3
+    }
+  }]
+}
+```
+
+- `enabled` — Enable web search (required)
+- `force_search` — Force search even if model thinks it's not needed
+- `max_keyword` — Max number of search keywords per request
+
+**Supported models:** All MiMo models
+
+### 6. Image Understanding (Multimodal)
 
 ```bash
 # With image URL
