@@ -91,6 +91,19 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		enableThinking = req.Thinking.Type == "enabled"
 	}
 
+	// Check for web search tool
+	webSearchEnabled := false
+	for _, tool := range req.Tools {
+		if tool.Type == "web_search" && tool.WebSearch != nil && tool.WebSearch.Enabled {
+			webSearchEnabled = true
+			break
+		}
+	}
+	webSearchStatus := "disabled"
+	if webSearchEnabled {
+		webSearchStatus = "enabled"
+	}
+
 	// Process messages for multimodal content
 	query, medias, err := h.processMessages(cookie.FullCookie, req.Messages, mimoModel)
 	if err != nil {
@@ -109,7 +122,7 @@ func (h *Handler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		IsEditedQuery:  false,
 		ModelConfig: mimo.MiMoModelCfg{
 			EnableThinking:  enableThinking,
-			WebSearchStatus: "disabled",
+			WebSearchStatus: webSearchStatus,
 			Model:           mimoModel,
 			Temperature:     temp,
 			TopP:            topP,

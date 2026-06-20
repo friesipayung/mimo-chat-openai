@@ -6,6 +6,34 @@ type ThinkingConfig struct {
 	Type string `json:"type"` // "enabled" or "disabled"
 }
 
+type Tool struct {
+	Type       string        `json:"type"`
+	WebSearch  *WebSearchCfg `json:"web_search,omitempty"`
+	Function   *FunctionCfg  `json:"function,omitempty"`
+}
+
+type WebSearchCfg struct {
+	Enabled     bool `json:"enabled"`
+	ForceSearch bool `json:"force_search,omitempty"`
+	MaxKeyword  int  `json:"max_keyword,omitempty"`
+}
+
+type FunctionCfg struct {
+	Name        string      `json:"name"`
+	Description string      `json:"description,omitempty"`
+	Parameters  interface{} `json:"parameters,omitempty"`
+}
+
+type Annotation struct {
+	Type        string `json:"type"`
+	URL         string `json:"url,omitempty"`
+	Title       string `json:"title,omitempty"`
+	Summary     string `json:"summary,omitempty"`
+	SiteName    string `json:"site_name,omitempty"`
+	PublishTime string `json:"publish_time,omitempty"`
+	LogoURL     string `json:"logo_url,omitempty"`
+}
+
 type ChatCompletionRequest struct {
 	Model       string        `json:"model"`
 	Messages    []ChatMessage `json:"messages"`
@@ -14,12 +42,14 @@ type ChatCompletionRequest struct {
 	TopP        *float64      `json:"top_p,omitempty"`
 	MaxTokens   *int          `json:"max_tokens,omitempty"`
 	Thinking    *ThinkingConfig `json:"thinking,omitempty"`
+	Tools       []Tool        `json:"tools,omitempty"`
 }
 
 type ChatMessage struct {
-	Role             string  `json:"role"`
-	Content          interface{} `json:"content"`
-	ReasoningContent *string `json:"reasoning_content,omitempty"`
+	Role             string        `json:"role"`
+	Content          interface{}   `json:"content"`
+	ReasoningContent *string       `json:"reasoning_content,omitempty"`
+	Annotations      []Annotation  `json:"annotations,omitempty"`
 }
 
 type ChatCompletionResponse struct {
