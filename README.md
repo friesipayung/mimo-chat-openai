@@ -15,7 +15,7 @@ Xiaomi MiMo Web → OpenAI-compatible API proxy with built-in Web UI management.
 
 ## What It Does
 
-Wraps the Xiaomi MiMo Studio web chat API into a standard OpenAI Chat Completions compatible endpoint, with a Web UI for cookie management, monitoring, and configuration.
+Wraps the Xiaomi MiMo Studio web chat API into a standard OpenAI Chat Completions compatible endpoint, with a Web UI for cookie management, API key management, monitoring, and configuration.
 
 ```
 ┌─────────────────┐      ┌──────────────────┐      ┌─────────────────────────┐
@@ -27,27 +27,41 @@ Wraps the Xiaomi MiMo Studio web chat API into a standard OpenAI Chat Completion
 
 ## Features
 
+### API
+
 - OpenAI-compatible `/v1/chat/completions` endpoint
+- **API key authentication** — Multiple keys with enable/disable toggle
 - Streaming & non-streaming support
-- Thinking/reasoning content extraction
-- Multi-account cookie pool with random selection
-- Web UI for cookie management (per-key & bulk input)
-- Cookie health check (auto-detect expired cookies)
+- **Thinking/reasoning** — Chain-of-thought extraction via `reasoning_content`
+- Model selection — 5 MiMo models available
+- Configurable temperature, top-p parameters
+
+### Web UI
+
 - Dashboard with request stats, token usage, success rate
-- Request logging
-- Model configuration (temperature, top-p, default model)
+- Cookie management (per-key & bulk input)
+- API key management (create, delete, enable/disable)
+- Cookie health check (auto-detect expired cookies)
+- Request logging with API key and cookie tracking
+- Model configuration (default model, temperature, top-p, thinking mode)
+- Password change
+
+### Infrastructure
+
+- Multi-account cookie pool with random selection
+- SQLite storage (cookies, API keys, config, logs)
 - Single binary deployment
 - Docker Compose ready
 
 ## Supported Models
 
-| Model ID | MiMo Model | Context |
-|----------|------------|---------|
-| `mimo-v2.5-pro` | MiMo-V2.5-Pro | 1M |
-| `mimo-v2.5` | MiMo-V2.5 | 1M |
-| `mimo-v2-flash` | MiMo-V2-Flash | 256K |
-| `mimo-v2-pro` | MiMo-V2-Pro | 1M |
-| `mimo-v2-omni` | MiMo-V2-Omni | 256K |
+| Model ID | MiMo Model | Context | Default Thinking |
+|----------|------------|---------|------------------|
+| `mimo-v2.5-pro` | MiMo-V2.5-Pro | 1M | Enabled |
+| `mimo-v2.5` | MiMo-V2.5 | 1M | Enabled |
+| `mimo-v2-flash` | MiMo-V2-Flash | 256K | Disabled |
+| `mimo-v2-pro` | MiMo-V2-Pro | 1M | Enabled |
+| `mimo-v2-omni` | MiMo-V2-Omni | 256K | Enabled |
 
 ## Quick Start
 
@@ -59,15 +73,22 @@ cd mimo-chat-openai
 docker compose up -d
 ```
 
-Open `http://localhost:8090` for Web UI.
+Open `http://localhost:8090/ui/` for Web UI.
+
+### From Source
+
+```bash
+go build ./cmd/mimo-proxy/
+./mimo-proxy
+```
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ADMIN_PASSWORD` | `12345678` | Web UI login password |
 | `LISTEN` | `:8090` | Listen address |
-| `DB_PATH` | `/data/mimo.db` | SQLite database path |
+| `ADMIN_PASSWORD` | `12345678` | Initial Web UI password (can be changed in UI) |
+| `DB_PATH` | `data/mimo.db` | SQLite database path |
 
 ## How to Get Cookies
 
@@ -77,13 +98,36 @@ Open `http://localhost:8090` for Web UI.
 4. Find the `/open-apis/bot/chat` request
 5. Copy the full `Cookie` header value
 
+Format: `serviceToken=xxx; userId=xxx; xiaomichatbot_ph=xxx`
+
 ## Usage
 
-### curl
+### 1. Create API Key
+
+First, create an API key via Web UI (http://localhost:8090/ui/#/keys) or via API:
 
 ```bash
-curl http://localhost:8090/v1/chat/completions \
+# Login to get session cookie
+curl -X POST http://localhost:8090/api/auth/login \
   -H "Content-Type: application/json" \
+  -d '{"password":"12345678"}' \
+  -c cookies.txt
+
+# Create API key
+curl -X POST http://localhost:8090/api/keys \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{"name":"my-key"}'
+
+# Response: {"id":1, "key":"sk-xxxx...", "name":"my-key"}
+```
+
+### 2. Chat Completion (Non-streaming)
+
+```bash
+curl -X POST http://localhost:8090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-xxxx..." \
   -d '{
     "model": "mimo-v2.5-pro",
     "messages": [{"role": "user", "content": "Hello!"}],
@@ -91,41 +135,130 @@ curl http://localhost:8090/v1/chat/completions \
   }'
 ```
 
-### OpenAI Python SDK
+### 3. Chat Completion (Streaming)
+
+```bash
+curl -X POST http://localhost:8090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-xxxx..." \
+  -d '{
+    "model": "mimo-v2.5-pro",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "stream": true
+  }'
+```
+
+### 4. With Thinking/Reasoning
+
+```bash
+curl -X POST http://localhost:8090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-xxxx..." \
+  -d '{
+    "model": "mimo-v2.5-pro",
+    "messages": [{"role": "user", "content": "What is 15 * 23? Think step by step."}],
+    "thinking": {"type": "enabled"}
+  }'
+```
+
+Response includes `reasoning_content`:
+
+```json
+{
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      "content": "15 × 23 = 345",
+      "reasoning_content": "First, I need to compute 15 * 23..."
+    }
+  }]
+}
+```
+
+### 5. OpenAI Python SDK
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:8090/v1",
-    api_key="not-needed"
+    api_key="sk-xxxx..."
 )
 
+# Simple chat
 response = client.chat.completions.create(
     model="mimo-v2.5-pro",
     messages=[{"role": "user", "content": "Hello!"}]
 )
 print(response.choices[0].message.content)
+
+# With thinking
+response = client.chat.completions.create(
+    model="mimo-v2.5-pro",
+    messages=[{"role": "user", "content": "Explain quantum computing"}],
+    extra_body={"thinking": {"type": "enabled"}}
+)
+print(response.choices[0].message.reasoning_content)
+print(response.choices[0].message.content)
 ```
+
+### 6. List Models
+
+```bash
+curl http://localhost:8090/v1/models
+```
+
+## API Reference
+
+### Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/v1/chat/completions` | POST | API Key | Chat completion |
+| `/v1/models` | GET | None | List models |
+| `/health` | GET | None | Health check |
+
+### Request Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `model` | string | required | Model ID (e.g. `mimo-v2.5-pro`) |
+| `messages` | array | required | Chat messages |
+| `stream` | boolean | `false` | Enable streaming |
+| `thinking` | object | `null` | Thinking config `{"type": "enabled"}` or `{"type": "disabled"}` |
+| `temperature` | number | `0.8` | Sampling temperature (0-2) |
+| `top_p` | number | `0.95` | Top-p sampling (0-1) |
+
+### Authentication
+
+API requests require `Authorization: Bearer <api_key>` header.
+
+API keys can be created and managed via:
+- Web UI: http://localhost:8090/ui/#/keys
+- API: `POST /api/keys` (requires session auth)
 
 ## Web UI
 
-After starting, open `http://localhost:8090`:
+After starting, open `http://localhost:8090/ui/`:
 
-- **Dashboard** — Request stats, token usage, success rate
-- **Cookies** — Add/edit/delete cookies, health check
-- **Config** — Default model, temperature, thinking mode
-- **Logs** — Recent request logs
+| Page | Description |
+|------|-------------|
+| **Dashboard** | Request stats, token usage, success rate, API usage info |
+| **Cookies** | Add/delete cookies, bulk input, health check |
+| **API Keys** | Create/delete keys, enable/disable toggle, usage tracking |
+| **Configuration** | Default model, temperature, top-p, thinking mode, password change |
+| **Logs** | Recent request logs with API key and cookie info |
 
-Default password: `12345678`
+Default password: `12345678` (can be changed in Configuration page)
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|-----------|
 | Backend | Go (net/http) |
-| Frontend | Vue 3 SPA |
-| Database | SQLite |
+| Frontend | Vue 3 SPA (embedded) |
+| Database | SQLite (modernc.org/sqlite) |
+| Styling | Tailwind CSS |
 | Build | Docker multi-stage |
 
 ## Project Structure
@@ -134,15 +267,21 @@ Default password: `12345678`
 mimo-chat-openai/
 ├── cmd/
 │   └── mimo-proxy/
-│       └── main.go
+│       ├── main.go
+│       └── web/dist/index.html    # Embedded Vue SPA
 ├── internal/
-│   ├── config/
-│   ├── db/
+│   ├── config/config.go
+│   ├── db/db.go                   # SQLite storage
 │   ├── mimo/
-│   ├── proxy/
+│   │   ├── client.go              # MiMo web API client
+│   │   └── sse.go                 # SSE parser
+│   ├── proxy/handler.go           # OpenAI proxy handler
 │   └── web/
-├── web/                  # Vue SPA source
-├── migrations/
+│       ├── auth.go                # Session auth
+│       ├── apikeys.go             # API key & password handlers
+│       ├── cookies.go
+│       ├── config.go
+│       └── stats.go
 ├── Dockerfile
 ├── docker-compose.yml
 ├── go.mod
@@ -158,6 +297,7 @@ MIT — For educational purposes only.
 - [rong6/mimo-2api](https://github.com/rong6/mimo-2api) — Similar proxy in Go
 - [tcsenpai/mimoapi](https://github.com/tcsenpai/mimoapi) — TypeScript SDK
 - [mark-618/mimo-auth](https://github.com/mark-618/mimo-auth) — Profile switcher
+- [xyuai/XiaomiMiMo-TUI](https://github.com/xyuai/XiaomiMiMo-TUI) — Terminal client
 
 ## Legal
 
