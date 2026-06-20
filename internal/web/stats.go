@@ -46,5 +46,8 @@ func (h *LogsHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
+	if logs == nil {
+		logs = []db.RequestLog{}
+	}
 	writeJSON(w, 200, logs)
 }

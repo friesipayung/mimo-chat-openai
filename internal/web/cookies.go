@@ -40,6 +40,9 @@ func (h *CookieHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
+	if cookies == nil {
+		cookies = []db.Cookie{}
+	}
 	writeJSON(w, 200, cookies)
 }
 

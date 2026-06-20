@@ -34,6 +34,9 @@ func (h *APIKeyHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
+	if keys == nil {
+		keys = []db.APIKey{}
+	}
 	writeJSON(w, 200, keys)
 }
 
